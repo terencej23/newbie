@@ -9,7 +9,7 @@
     | INT of int
     | FLOAT of float
     | ID of string
-    | EQUALS
+    | EQUAL
     | PLUS
     | MINUS
     | MULT
@@ -20,7 +20,7 @@
   let sprintf = Printf.sprintf
 
   (* TODO: move to separate module for err reporting ~begin *)
-  let pos_ lexbuf = 
+  let pos lexbuf = 
     let p = lexbuf.L.lex_curr_p in
       (* filename:line:col *)
       sprintf "%s:%d:%d" p.L.pos_fname p.L.pos_lnum (p.L.pos_cnum - p.L.pos_bol)
@@ -33,7 +33,7 @@
 
   exception Error of string
   let err lexbuf format =
-    Printf.ksprintf (fun msg -> raise (Error((pos fname)^" "^msg)) format
+    Printf.ksprintf (fun msg -> raise (Error((pos lexbuf)^" "^msg))) format
 
   (* ~end *)
 }
@@ -58,12 +58,35 @@ rule token = parse
   | '-'               { MINUS }
   | '*'               { MULT }
   | '/'               { DIVIDE }
-  | '='               { EQUALS }
+  | '='               { EQUAL }
   (* TODO: special handling of str *)
   (* TODO: special handling of multiline comments *)
   | eof               { EOF } 
-  | _                 { error lexbuf "unrecognized char '%s'" (get lexbuf) }
+  | _                 { err lexbuf "unrecognized char '%s'" (get lexbuf) }
 
 {
+  (* TODO: port to debugging module *)
+  let to_string = function
+      STR(str)    -> sprintf "STR(%s)" (str) (* TODO: escape str *)
+    | INT(num)    -> sprintf "INT(%d)" num
+    | FLOAT(num)  -> sprintf "FLOAT(%f)" num
+    | ID(str)     -> sprintf "ID(%s)" str
+    | EQUAL       -> sprintf "EQUALS"
+    | PLUS        -> sprintf "PLUS"
+    | MINUS       -> sprintf "MINUS"
+    | MULT        -> sprintf "MULT"
+    | DIVIDE      -> sprintf "DIVIDE"
+    | EOF         -> sprintf "EOF"
 
+  let main () = 
+    let lexbuf = set_fname "stdin" (L.from_channel stdin) in
+    let rec loop list = function
+        EOF       -> to_string EOF :: list |> List.rev
+      | input     -> loop (to_string input :: list) (token lexbuf)
+    in 
+      loop [] (token lexbuf)
+      |> String.concat " "
+      |> print_endline
+
+  let _ = Printexc.print main ()
 }
