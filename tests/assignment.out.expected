@@ -1,0 +1,1 @@
+ASSIGN ID(integer) TO INT(1) PLUS INT(1) ASSIGN ID(float) TO FLOAT(1.000000) PLUS FLOAT(1.500000) ASSIGN ID(str_easy) TO STR(this is a string) ASSIGN ID(str_hard) TO STR( \" this is a quote \" \n ) EOF
