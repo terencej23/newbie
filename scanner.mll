@@ -41,6 +41,8 @@
     | COMMA
     | LPAREN
     | RPAREN
+    | INDENT
+    | DEDENT
     | EOF
 
   (* TODO: move to separate module for err reporting ~begin *)
@@ -74,7 +76,7 @@ let ws = [' ' '\t']
 rule token = parse
     ws+                       { token lexbuf }
   | nl tab* as delimit        { (* TODO: track INDENT/DEDENT TOKEN *)
-                                L.new_line lexbuf ; token lexbuf 
+                                L.new_line lexbuf ; token lexbuf
                               }  
   | "if"                      { IF }
   | "else"                    { ELSE }
@@ -165,10 +167,18 @@ and str buf = parse
     | COMMA       -> Printf.sprintf "COMMA"
     | LPAREN      -> Printf.sprintf "LPAREN"
     | RPAREN      -> Printf.sprintf "RPAREN"
+    | INDENT      -> Printf.sprintf "INDENT"
+    | DEDENT      -> Printf.sprintf "DEDENT"
     | EOF         -> Printf.sprintf "EOF"
 
   let main () = 
-    let lexbuf = set_fname "stdin" (L.from_channel stdin) in
+    let (channel, fname) = 
+      if Array.length Sys.argv > 1 then
+        ((open_in Sys.argv.(1)), Sys.argv.(1))
+      else
+        (stdin, "stdin")
+    in
+    let lexbuf = set_fname fname (L.from_channel channel) in
     let rec loop list = function
         EOF       -> to_string EOF :: list |> List.rev
       | input     -> loop (to_string input :: list) (token lexbuf)
