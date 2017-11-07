@@ -2,6 +2,7 @@
 {
   module L = Lexing
   module B = Buffer
+  open Printf
 
   (* TODO: incomplete - move into ocamllyac parser module *)
   type token =
@@ -17,7 +18,7 @@
     | EOF
 
   let get = L.lexeme
-  let sprintf = Printf.sprintf
+  let buf_size = 100 (* default buffer size *)
 
   (* TODO: move to separate module for err reporting ~begin *)
   let pos lexbuf = 
@@ -33,7 +34,7 @@
 
   exception Error of string
   let err lexbuf format =
-    Printf.ksprintf (fun msg -> raise (Error((pos lexbuf)^" "^msg))) format
+    ksprintf (fun msg -> raise (Error((pos lexbuf)^" "^msg))) format
 
   (* ~end *)
 }
@@ -59,15 +60,28 @@ rule token = parse
   | '*'               { MULT }
   | '/'               { DIVIDE }
   | '='               { EQUAL }
-  (* TODO: special handling of str *)
+  | '"'               { STR(str (B.create buf_size) lexbuf) }
+  (* TODO: special handling of list *)
   (* TODO: special handling of multiline comments *)
   | eof               { EOF } 
+  | _                 { err lexbuf "unrecognized char '%s'" (get lexbuf) }
+
+and str buf = parse
+  | [^ '"' '\r' '\n' '\\' ]+ { B.add_string buf (get lexbuf) ; str buf lexbuf }
+  | nl                { B.add_string buf (get lexbuf) ; L.new_line ; str buf lexbuf }
+  | ('\\' '"')        { B.add_char buf '"' ; str buf lexbuf }
+  | ('\\' 'n')        { B.add_char buf '\n' ; str buf lexbuf }
+  | ('\\' 'r')        { B.add_char buf '\r' ; str buf lexbuf }
+  | ('\\' 't')        { B.add_char buf '\t' ; str buf lexbuf }
+  | '\\'              { B.add_char buf '\\' ; str buf lexbuf }
+  | '"'               { B.contents buf } (* return *)
+  | eof               { err lexbuf "eof within str" }
   | _                 { err lexbuf "unrecognized char '%s'" (get lexbuf) }
 
 {
   (* TODO: port to debugging module *)
   let to_string = function
-      STR(str)    -> sprintf "STR(%s)" (str) (* TODO: escape str *)
+      STR(str)    -> sprintf "STR(%s)" (String.escaped str)
     | INT(num)    -> sprintf "INT(%d)" num
     | FLOAT(num)  -> sprintf "FLOAT(%f)" num
     | ID(str)     -> sprintf "ID(%s)" str
