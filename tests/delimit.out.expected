@@ -1,0 +1,1 @@
+ID(goodbye) EQUAL INT(0) DEF ID(hello_world) WITH ID(no) PARAMS INDENT IF LPAREN TRUE RPAREN INDENT ID(goodbye) EQUAL INT(1) DEDENT ID(print) STR(hello_world) DEDENT EOF 
