@@ -135,9 +135,11 @@ let ws = [' ' '\t']
 
 (* TODO: pass in stack arg for tracking indentation *)
 rule token stream = parse
-    nl tab* as delimit        { L.new_line lexbuf ; 
+    nl tab* as delimit        { 
+                                L.new_line lexbuf ; 
                                 let toks = de_indent_gen delimit stream indent_stack in 
-                                token toks lexbuf }  
+                                token toks lexbuf
+                              }  
   | ws+                       { token stream lexbuf }
   | "if"                      { let toks = IF     :: stream in token toks lexbuf }
   | "else"                    { let toks = ELSE   :: stream in token toks lexbuf }
@@ -225,6 +227,7 @@ and str buf = parse
     | AND         -> Printf.sprintf "AND"
     | OR          -> Printf.sprintf "OR"
     | NOT         -> Printf.sprintf "NOT"
+    | NO          -> Printf.sprintf "NO"
     | RETURN      -> Printf.sprintf "RETURN"
     | COMMA       -> Printf.sprintf "COMMA"
     | LPAREN      -> Printf.sprintf "LPAREN"
