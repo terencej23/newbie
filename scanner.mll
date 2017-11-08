@@ -7,9 +7,9 @@
 
   (* TODO: incomplete - move into ocamllyac parser module *)
   type token =
-      STR of string
-    | INT of int
-    | FLOAT of float
+      STRLIT of string
+    | INTLIT of int
+    | FLOATLIT of float
     | ID of string
     | ATTR
     | NUM_
@@ -169,14 +169,14 @@ rule token stream = parse
   | ('=' | "equals")          { let toks = EQUALS :: stream in token toks lexbuf }
   | ('>' | "greater than")    { let toks = GT     :: stream in token toks lexbuf }
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
-  | '"'                       { let toks = STR(str (B.create buf_size) lexbuf) :: stream in token toks lexbuf }
+  | '"'                       { let toks = STRLIT(str (B.create buf_size) lexbuf) :: stream in token toks lexbuf }
 (* TODO: special handling of list *)
   | '#'                       { comment stream lexbuf }
   | "/*"                      { multi_comment stream lexbuf } 
-  | "num"                     { let toks = NUM_   :: stream in token toks lexbuf }
-  | "str"                     { let toks = STR_   :: stream in token toks lexbuf }
-  | digit+ as num             { let toks = INT(int_of_string num) :: stream in token toks lexbuf }
-  | digit+ '.' digit* as num  { let toks = FLOAT(float_of_string num) :: stream in token toks lexbuf }
+  | "num"                     { let toks = NUM   :: stream in token toks lexbuf }
+  | "str"                     { let toks = STR   :: stream in token toks lexbuf }
+  | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
+  | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
   | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
   | id as ident               { let toks = ID(ident) :: stream in token toks lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
@@ -208,44 +208,44 @@ and multi_comment stream = parse
 {
   (* TODO: port to debugging module *)
   let to_string = function
-      STR(str)    -> Printf.sprintf "STR(%s)" (String.escaped str)
-    | INT(num)    -> Printf.sprintf "INT(%d)" num
-    | FLOAT(num)  -> Printf.sprintf "FLOAT(%f)" num
-    | ID(str)     -> Printf.sprintf "ID(%s)" str
-    | ATTR        -> Printf.sprintf "ATTR" 
-    | NUM_        -> Printf.sprintf "NUM_TYPE"
-    | STR_        -> Printf.sprintf "STR_TYPE"
-    | ASSIGN      -> Printf.sprintf "ASSIGN"
-    | DEF         -> Printf.sprintf "DEF"
-    | WITH        -> Printf.sprintf "WITH"
-    | PARAMS      -> Printf.sprintf "PARAMS"
-    | EQUALS      -> Printf.sprintf "EQUAL"
-    | GT          -> Printf.sprintf "GT"
-    | LT          -> Printf.sprintf "LT"
-    | PLUS        -> Printf.sprintf "PLUS"
-    | MINUS       -> Printf.sprintf "MINUS"
-    | MULT        -> Printf.sprintf "MULT"
-    | DIVIDE      -> Printf.sprintf "DIVIDE"
-    | IF          -> Printf.sprintf "IF"
-    | TRUE        -> Printf.sprintf "TRUE"
-    | FALSE       -> Printf.sprintf "FALSE"
-    | ELSE        -> Printf.sprintf "ELSE"
-    | FOR         -> Printf.sprintf "FOR"
-    | WHILE       -> Printf.sprintf "WHILE"
-    | IN          -> Printf.sprintf "IN"
-    | EACH        -> Printf.sprintf "EACH"
-    | TO          -> Printf.sprintf "TO"
-    | AND         -> Printf.sprintf "AND"
-    | OR          -> Printf.sprintf "OR"
-    | NOT         -> Printf.sprintf "NOT"
-    | NO          -> Printf.sprintf "NO"
-    | RETURN      -> Printf.sprintf "RETURN"
-    | COMMA       -> Printf.sprintf "COMMA"
-    | LPAREN      -> Printf.sprintf "LPAREN"
-    | RPAREN      -> Printf.sprintf "RPAREN"
-    | INDENT      -> Printf.sprintf "INDENT"
-    | DEDENT      -> Printf.sprintf "DEDENT"
-    | EOF         -> Printf.sprintf "EOF"
+      STRLIT(str)     -> Printf.sprintf "STRLIT(%s)" (String.escaped str)
+    | INTLIT(num)     -> Printf.sprintf "INTLIT(%d)" num
+    | FLOATLIT(num)   -> Printf.sprintf "FLOATLIT(%f)" num
+    | ID(str)         -> Printf.sprintf "ID(%s)" str
+    | ATTR            -> Printf.sprintf "ATTR" 
+    | NUM             -> Printf.sprintf "NUM"
+    | STR             -> Printf.sprintf "STR"
+    | ASSIGN          -> Printf.sprintf "ASSIGN"
+    | DEF             -> Printf.sprintf "DEF"
+    | WITH            -> Printf.sprintf "WITH"
+    | PARAMS          -> Printf.sprintf "PARAMS"
+    | EQUALS          -> Printf.sprintf "EQUAL"
+    | GT              -> Printf.sprintf "GT"
+    | LT              -> Printf.sprintf "LT"
+    | PLUS            -> Printf.sprintf "PLUS"
+    | MINUS           -> Printf.sprintf "MINUS"
+    | MULT            -> Printf.sprintf "MULT"
+    | DIVIDE          -> Printf.sprintf "DIVIDE"
+    | IF              -> Printf.sprintf "IF"
+    | TRUE            -> Printf.sprintf "TRUE"
+    | FALSE           -> Printf.sprintf "FALSE"
+    | ELSE            -> Printf.sprintf "ELSE"
+    | FOR             -> Printf.sprintf "FOR"
+    | WHILE           -> Printf.sprintf "WHILE"
+    | IN              -> Printf.sprintf "IN"
+    | EACH            -> Printf.sprintf "EACH"
+    | TO              -> Printf.sprintf "TO"
+    | AND             -> Printf.sprintf "AND"
+    | OR              -> Printf.sprintf "OR"
+    | NOT             -> Printf.sprintf "NOT"
+    | NO              -> Printf.sprintf "NO"
+    | RETURN          -> Printf.sprintf "RETURN"
+    | COMMA           -> Printf.sprintf "COMMA"
+    | LPAREN          -> Printf.sprintf "LPAREN"
+    | RPAREN          -> Printf.sprintf "RPAREN"
+    | INDENT          -> Printf.sprintf "INDENT"
+    | DEDENT          -> Printf.sprintf "DEDENT"
+    | EOF             -> Printf.sprintf "EOF"
 
   let main () =
     let (channel, fname) =
