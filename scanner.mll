@@ -12,8 +12,8 @@
     | FLOATLIT of float
     | ID of string
     | ATTR
-    | NUM_
-    | STR_
+    | NUM
+    | STR
     | ASSIGN
     | DEF
     | WITH
