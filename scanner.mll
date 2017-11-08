@@ -44,6 +44,7 @@
     | RPAREN
     | INDENT
     | DEDENT
+    | PRINT
     | EOF
 
   (* TODO: move to separate module for err reporting ~begin *)
@@ -175,6 +176,7 @@ rule token stream = parse
   | "/*"                      { multi_comment stream lexbuf } 
   | "num"                     { let toks = NUM   :: stream in token toks lexbuf }
   | "str"                     { let toks = STR   :: stream in token toks lexbuf }
+  | "print"                   { let toks = PRINT :: stream in token toks lexbuf }
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
   | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
@@ -245,6 +247,7 @@ and multi_comment stream = parse
     | RPAREN          -> Printf.sprintf "RPAREN"
     | INDENT          -> Printf.sprintf "INDENT"
     | DEDENT          -> Printf.sprintf "DEDENT"
+    | PRINT           -> Printf.sprintf "PRINT"
     | EOF             -> Printf.sprintf "EOF"
 
   let main () =
