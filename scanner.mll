@@ -36,6 +36,7 @@
     | IN
     | AND
     | OR
+    | NO
     | NOT
     | RETURN
     | COMMA
@@ -148,6 +149,7 @@ rule token stream = parse
   | "in"                      { let toks = IN     :: stream in token toks lexbuf }
   | "and"                     { let toks = AND    :: stream in token toks lexbuf }
   | "or"                      { let toks = OR     :: stream in token toks lexbuf }
+  | "no"                      { let toks = NO     :: stream in token toks lexbuf }
   | "not"                     { let toks = NOT    :: stream in token toks lexbuf }
   | "return"                  { let toks = RETURN :: stream in token toks lexbuf }
   | "set"                     { let toks = ASSIGN :: stream in token toks lexbuf }
