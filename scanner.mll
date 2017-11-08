@@ -171,7 +171,8 @@ rule token stream = parse
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
   | '"'                       { let toks = STR(str (B.create buf_size) lexbuf) :: stream in token toks lexbuf }
 (* TODO: special handling of list *)
-(* TODO: special handling of (multiline) comments *)
+  | '#'                       { comment stream lexbuf }
+  | "/*"                      { multi_comment stream lexbuf } 
   | "num"                     { let toks = NUM_   :: stream in token toks lexbuf }
   | "str"                     { let toks = STR_   :: stream in token toks lexbuf }
   | digit+ as num             { let toks = INT(int_of_string num) :: stream in token toks lexbuf }
@@ -193,6 +194,16 @@ and str buf = parse
   | '"'                       { B.contents buf } (* return *)
   | eof                       { err lexbuf "eof within str" }
   | _ as char                 { err lexbuf "unrecognized char '%c'" char }
+
+and comment stream = parse
+  | nl                        { token stream lexbuf }
+  | eof                       { eof_dedent stream indent_stack } 
+  | _                         { comment stream lexbuf }
+
+and multi_comment stream = parse
+  | "*/"                      { token stream lexbuf }
+  | eof                       { err lexbuf "eof within comment" }
+  | _                         { multi_comment stream lexbuf }
 
 {
   (* TODO: port to debugging module *)
