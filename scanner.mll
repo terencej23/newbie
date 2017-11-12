@@ -12,8 +12,6 @@
     | FLOATLIT of float
     | ID of string
     | ATTR
-    | NUM
-    | STR
     | ASSIGN
     | DEF
     | WITH
@@ -44,7 +42,6 @@
     | RPAREN
     | INDENT
     | DEDENT
-    | PRINT
     | EOF
 
   (* TODO: move to separate module for err reporting ~begin *)
@@ -59,9 +56,8 @@
       lexbuf
     )
 
-  exception Error of string
   let err lexbuf format =
-    Printf.ksprintf (fun msg -> raise (Error((pos lexbuf)^" "^msg))) format
+    Printf.ksprintf (fun msg -> raise (Failure((pos lexbuf)^" "^msg))) format
 
   (* ~end *)
 
@@ -174,9 +170,6 @@ rule token stream = parse
 (* TODO: special handling of list *)
   | '#'                       { comment stream lexbuf }
   | "/*"                      { multi_comment stream lexbuf } 
-  | "num"                     { let toks = NUM   :: stream in token toks lexbuf }
-  | "str"                     { let toks = STR   :: stream in token toks lexbuf }
-  | "print"                   { let toks = PRINT :: stream in token toks lexbuf }
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
   | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
@@ -215,8 +208,6 @@ and multi_comment stream = parse
     | FLOATLIT(num)   -> Printf.sprintf "FLOATLIT(%f)" num
     | ID(str)         -> Printf.sprintf "ID(%s)" str
     | ATTR            -> Printf.sprintf "ATTR" 
-    | NUM             -> Printf.sprintf "NUM"
-    | STR             -> Printf.sprintf "STR"
     | ASSIGN          -> Printf.sprintf "ASSIGN"
     | DEF             -> Printf.sprintf "DEF"
     | WITH            -> Printf.sprintf "WITH"
@@ -247,9 +238,14 @@ and multi_comment stream = parse
     | RPAREN          -> Printf.sprintf "RPAREN"
     | INDENT          -> Printf.sprintf "INDENT"
     | DEDENT          -> Printf.sprintf "DEDENT"
-    | PRINT           -> Printf.sprintf "PRINT"
     | EOF             -> Printf.sprintf "EOF"
 
+  let string_of_tokens tokens = 
+    List.map (fun elem -> to_string elem) tokens
+    |> List.rev
+    |> String.concat " "
+
+(* deprecated - TODO: remove
   let main () =
     let (channel, fname) =
       if Array.length Sys.argv > 1 then
@@ -264,4 +260,5 @@ and multi_comment stream = parse
     token_list
 
   let _ = Printexc.print main ()
+*)
 }
