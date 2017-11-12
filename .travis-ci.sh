@@ -2,7 +2,9 @@
 OPAM_DEPENDS="ocamlfind ounit re"
 	 
 case "$OCAML_VERSION,$OPAM_VERSION" in
+4.06.0,1.2.2) ppa=avsm/ocaml45+opam12 ;;
 4.05.0,1.2.2) ppa=avsm/ocaml45+opam12 ;;
+4.04.0,1.2.2) ppa=avsm/ocaml45+opam12 ;;
 *) echo Unknown $OCAML_VERSION,$OPAM_VERSION; exit 1 ;;
 esac
 	 
