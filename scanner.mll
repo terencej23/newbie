@@ -36,12 +36,14 @@
     | OR
     | NO
     | NOT
+    | FUNC
     | RETURN
     | COMMA
     | LPAREN
     | RPAREN
     | INDENT
     | DEDENT
+    | NEWLINE
     | EOF
 
   (* TODO: move to separate module for err reporting ~begin *)
@@ -134,7 +136,7 @@ let ws = [' ' '\t']
 rule token stream = parse
     nl tab* as delimit        { 
                                 L.new_line lexbuf ; 
-                                let toks = de_indent_gen delimit stream indent_stack in 
+                                let toks = de_indent_gen delimit (NEWLINE :: stream) indent_stack in 
                                 token toks lexbuf
                               }  
   | ws+                       { token stream lexbuf }
@@ -150,6 +152,7 @@ rule token stream = parse
   | "or"                      { let toks = OR     :: stream in token toks lexbuf }
   | "no"                      { let toks = NO     :: stream in token toks lexbuf }
   | "not"                     { let toks = NOT    :: stream in token toks lexbuf }
+  | "function"                { let toks = FUNC   :: stream in token toks lexbuf }
   | "return"                  { let toks = RETURN :: stream in token toks lexbuf }
   | "set"                     { let toks = ASSIGN :: stream in token toks lexbuf }
   | "define"                  { let toks = DEF    :: stream in token toks lexbuf }
@@ -232,12 +235,14 @@ and multi_comment stream = parse
     | OR              -> Printf.sprintf "OR"
     | NOT             -> Printf.sprintf "NOT"
     | NO              -> Printf.sprintf "NO"
+    | FUNC            -> Printf.sprintf "FUNC"
     | RETURN          -> Printf.sprintf "RETURN"
     | COMMA           -> Printf.sprintf "COMMA"
     | LPAREN          -> Printf.sprintf "LPAREN"
     | RPAREN          -> Printf.sprintf "RPAREN"
     | INDENT          -> Printf.sprintf "INDENT"
     | DEDENT          -> Printf.sprintf "DEDENT"
+    | NEWLINE         -> Printf.sprintf "NEWLINE"
     | EOF             -> Printf.sprintf "EOF"
 
   let string_of_tokens tokens = 
