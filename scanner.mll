@@ -1,4 +1,3 @@
-
 {
   module L = Lexing
   module B = Buffer
