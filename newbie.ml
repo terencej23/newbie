@@ -21,13 +21,13 @@ let main () =
     else                                                                        (* error *)
       raise (Failure("invalid format ./newbie [-tag] path_to_file"))
   in
-  let get_channel = function
+  let get_channel_from = function
       DEFAULT     -> open_in (Sys.argv.(1))
     | _           -> open_in (Sys.argv.(2))
   in
-  let lexbuf = Lexing.from_channel (get_channel action) in
+  let lexbuf = Lexing.from_channel (get_channel_from action) in
   let tokens = Scanner.token [] lexbuf in
-  (* let gen_ast = Parser.program tokens in *)
+  let gen_ast = Parser.program tokens in
   (* let gen_sast = Semant.check gen_ast in *)
   match action with
       TOKEN         -> print_endline (Scanner.string_of_tokens tokens)

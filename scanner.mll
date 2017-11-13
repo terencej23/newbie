@@ -1,48 +1,9 @@
-
 {
   module L = Lexing
   module B = Buffer
+  open Parser
 
   let buf_size = 100 (* default buffer size *) 
-
-  (* TODO: incomplete - move into ocamllyac parser module *)
-  type token =
-      STRLIT of string
-    | INTLIT of int
-    | FLOATLIT of float
-    | ID of string
-    | ATTR
-    | ASSIGN
-    | DEF
-    | WITH
-    | PARAMS
-    | TO
-    | EQUALS
-    | GT
-    | LT
-    | PLUS
-    | MINUS
-    | MULT
-    | DIVIDE
-    | IF
-    | ELSE
-    | TRUE
-    | FALSE
-    | FOR
-    | WHILE
-    | EACH
-    | IN
-    | AND
-    | OR
-    | NO
-    | NOT
-    | RETURN
-    | COMMA
-    | LPAREN
-    | RPAREN
-    | INDENT
-    | DEDENT
-    | EOF
 
   (* TODO: move to separate module for err reporting ~begin *)
   let pos lexbuf = 
@@ -134,22 +95,24 @@ let ws = [' ' '\t']
 rule token stream = parse
     nl tab* as delimit        { 
                                 L.new_line lexbuf ; 
-                                let toks = de_indent_gen delimit stream indent_stack in 
+                                let toks = de_indent_gen delimit (NEWLINE :: stream) indent_stack in 
                                 token toks lexbuf
                               }  
   | ws+                       { token stream lexbuf }
   | "if"                      { let toks = IF     :: stream in token toks lexbuf }
   | "else"                    { let toks = ELSE   :: stream in token toks lexbuf }
+(*   | "else if"                 { let toks = ELIF   :: stream in token toks lexbuf } *)
   | "true"                    { let toks = TRUE   :: stream in token toks lexbuf }
   | "false"                   { let toks = FALSE  :: stream in token toks lexbuf }
-  | "for"                     { let toks = FOR    :: stream in token toks lexbuf }
-  | "while"                   { let toks = WHILE  :: stream in token toks lexbuf }
-  | "each"                    { let toks = EACH   :: stream in token toks lexbuf }
-  | "in"                      { let toks = IN     :: stream in token toks lexbuf }
+(*   | "for"                     { let toks = FOR    :: stream in token toks lexbuf } *)
+(*   | "while"                   { let toks = WHILE  :: stream in token toks lexbuf } *)
+(*   | "each"                    { let toks = EACH   :: stream in token toks lexbuf } *)
+(*   | "in"                      { let toks = IN     :: stream in token toks lexbuf } *)
   | "and"                     { let toks = AND    :: stream in token toks lexbuf }
   | "or"                      { let toks = OR     :: stream in token toks lexbuf }
   | "no"                      { let toks = NO     :: stream in token toks lexbuf }
   | "not"                     { let toks = NOT    :: stream in token toks lexbuf }
+  | "function"                { let toks = FUNC   :: stream in token toks lexbuf }
   | "return"                  { let toks = RETURN :: stream in token toks lexbuf }
   | "set"                     { let toks = ASSIGN :: stream in token toks lexbuf }
   | "define"                  { let toks = DEF    :: stream in token toks lexbuf }
@@ -163,16 +126,19 @@ rule token stream = parse
   | ('-' | "minus")           { let toks = MINUS  :: stream in token toks lexbuf }
   | ('*' | "times")           { let toks = MULT   :: stream in token toks lexbuf }
   | ('/' | "divided by")      { let toks = DIVIDE :: stream in token toks lexbuf }
+  | ('%' | "modulo")          { let toks = MOD    :: stream in token toks lexbuf }
   | ('=' | "equals")          { let toks = EQUALS :: stream in token toks lexbuf }
   | ('>' | "greater than")    { let toks = GT     :: stream in token toks lexbuf }
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
+  | (">=" | "greater than or equal to") { let toks = GEQ    :: stream in token toks lexbuf }
+  | ("<=" | "less than or equal to")    { let toks = LEQ    :: stream in token toks lexbuf }
   | '"'                       { let toks = STRLIT(str (B.create buf_size) lexbuf) :: stream in token toks lexbuf }
 (* TODO: special handling of list *)
   | '#'                       { comment stream lexbuf }
   | "/*"                      { multi_comment stream lexbuf } 
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
-  | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
+(*   | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf } *)
   | id as ident               { let toks = ID(ident) :: stream in token toks lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
   | _ as char                 { err lexbuf "unrecognized char '%c'" char }
@@ -207,7 +173,7 @@ and multi_comment stream = parse
     | INTLIT(num)     -> Printf.sprintf "INTLIT(%d)" num
     | FLOATLIT(num)   -> Printf.sprintf "FLOATLIT(%f)" num
     | ID(str)         -> Printf.sprintf "ID(%s)" str
-    | ATTR            -> Printf.sprintf "ATTR" 
+(*     | ATTR            -> Printf.sprintf "ATTR"  *)
     | ASSIGN          -> Printf.sprintf "ASSIGN"
     | DEF             -> Printf.sprintf "DEF"
     | WITH            -> Printf.sprintf "WITH"
@@ -215,29 +181,35 @@ and multi_comment stream = parse
     | EQUALS          -> Printf.sprintf "EQUAL"
     | GT              -> Printf.sprintf "GT"
     | LT              -> Printf.sprintf "LT"
+    | GEQ             -> Printf.sprintf "GEQ"
+    | LEQ             -> Printf.sprintf "LEQ"
     | PLUS            -> Printf.sprintf "PLUS"
     | MINUS           -> Printf.sprintf "MINUS"
     | MULT            -> Printf.sprintf "MULT"
     | DIVIDE          -> Printf.sprintf "DIVIDE"
+    | MOD             -> Printf.sprintf "MOD"
     | IF              -> Printf.sprintf "IF"
+    | ELSE            -> Printf.sprintf "ELSE"
+(*     | ELIF            -> Printf.sprintf "ELIF" *)
     | TRUE            -> Printf.sprintf "TRUE"
     | FALSE           -> Printf.sprintf "FALSE"
-    | ELSE            -> Printf.sprintf "ELSE"
-    | FOR             -> Printf.sprintf "FOR"
-    | WHILE           -> Printf.sprintf "WHILE"
-    | IN              -> Printf.sprintf "IN"
-    | EACH            -> Printf.sprintf "EACH"
+(*     | FOR             -> Printf.sprintf "FOR" *)
+(*     | WHILE           -> Printf.sprintf "WHILE" *)
+(*     | IN              -> Printf.sprintf "IN" *)
+(*     | EACH            -> Printf.sprintf "EACH" *)
     | TO              -> Printf.sprintf "TO"
     | AND             -> Printf.sprintf "AND"
     | OR              -> Printf.sprintf "OR"
     | NOT             -> Printf.sprintf "NOT"
     | NO              -> Printf.sprintf "NO"
+    | FUNC            -> Printf.sprintf "FUNC"
     | RETURN          -> Printf.sprintf "RETURN"
     | COMMA           -> Printf.sprintf "COMMA"
     | LPAREN          -> Printf.sprintf "LPAREN"
     | RPAREN          -> Printf.sprintf "RPAREN"
     | INDENT          -> Printf.sprintf "INDENT"
     | DEDENT          -> Printf.sprintf "DEDENT"
+    | NEWLINE         -> Printf.sprintf "NEWLINE"
     | EOF             -> Printf.sprintf "EOF"
 
   let string_of_tokens tokens = 
