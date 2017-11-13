@@ -27,7 +27,7 @@ let main () =
   in
   let lexbuf = Lexing.from_channel (get_channel action) in
   let tokens = Scanner.token [] lexbuf in
-  (* let gen_ast = Parser.program tokens in *)
+  let gen_ast = Parser.program tokens in
   (* let gen_sast = Semant.check gen_ast in *)
   match action with
       TOKEN         -> print_endline (Scanner.string_of_tokens tokens)
