@@ -36,6 +36,7 @@ let main () =
         match tokens with
         | hd::tl  -> l := tl ; hd
         | []      -> failwith "how?"
+
   in
   let gen_ast = Parser.program cache lexbuf in
   (* let gen_sast = Semant.check gen_ast in *)
