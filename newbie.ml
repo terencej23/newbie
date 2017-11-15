@@ -26,8 +26,18 @@ let main () =
     | _           -> open_in (Sys.argv.(2))
   in
   let lexbuf = Lexing.from_channel (get_channel_from action) in
-  let tokens = Scanner.token [] lexbuf in
-  let gen_ast = Parser.program tokens in
+  let tokens = Scanner.token [] lexbuf in 
+  let cache = 
+    let l = ref [] in
+    fun lexbuf ->
+      match !l with
+      | x::xs  -> l := xs ; x
+      | []      -> 
+        match tokens with
+        | x::xs  -> l := xs ; x
+        | []      -> failwith "oops"
+  in
+  let gen_ast = Parser.program cache lexbuf in
   (* let gen_sast = Semant.check gen_ast in *)
   match action with
       TOKEN         -> print_endline (Scanner.string_of_tokens tokens)
