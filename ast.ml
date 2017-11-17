@@ -1,6 +1,7 @@
 type binop = Add | Sub | Div | Mod | Mult | Or | And | Lt | Leq | Gt | Geq | Eq 
 type typ = Int | Void | String | Float | Bool 
 type unop = Neg | Not
+type datatype = Datatype of typ
 
 type expr =
     | StrLit of string
@@ -17,7 +18,7 @@ type stmt =
     | Block of stmt list
     | If of expr * stmt * stmt
     | While of expr * stmt
-    | For of expr * expr * expr
+(*  | For of expr * expr * expr  *)
     | Expr of expr
     | Return of expr 
     | Assign of string * expr 
