@@ -9,10 +9,7 @@
   let pos lexbuf = 
     let p = lexbuf.L.lex_curr_p in
       (* filename:line:col *)
-      Printf.sprintf "%s:%d:%d" p.L.pos_fname p.L.pos_lnum (p.L.pos_cnum - p.L.pos_bol)
-
-  let set_fname fname lexbuf =
-    (
+      Printf.sprintf "%s:%d:%d" p.L.pos_fname p.L.pos_lnum (p.L.pos_cnum - p.L.pos_bol) let set_fname fname lexbuf = (
       lexbuf.L.lex_curr_p <- { lexbuf.L.lex_curr_p with L.pos_fname = fname } ;
       lexbuf
     )
@@ -93,7 +90,7 @@ let ws = [' ' '\t']
 
 (* TODO: pass in stack arg for tracking indentation *)
 rule token stream = parse
-    nl tab* as delimit        { 
+    nl+ tab* as delimit        { 
                                 L.new_line lexbuf ; 
                                 let toks = de_indent_gen delimit (NEWLINE :: stream) indent_stack in 
                                 token toks lexbuf
@@ -185,6 +182,7 @@ and multi_comment stream = parse
     | LEQ             -> Printf.sprintf "LEQ"
     | PLUS            -> Printf.sprintf "PLUS"
     | MINUS           -> Printf.sprintf "MINUS"
+    | NEG             -> Printf.sprintf "NEG"
     | MULT            -> Printf.sprintf "MULT"
     | DIVIDE          -> Printf.sprintf "DIVIDE"
     | MOD             -> Printf.sprintf "MOD"
@@ -214,7 +212,6 @@ and multi_comment stream = parse
 
   let string_of_tokens tokens = 
     List.map (fun elem -> to_string elem) tokens
-    |> List.rev
     |> String.concat " "
 
 (* deprecated - TODO: remove
