@@ -51,18 +51,18 @@ fdecl_params:
 fdecl_noparams:
   DEF FUNC ID WITH NO PARAMS NEWLINE INDENT stmt_list DEDENT
   {{
-      fname = $3 ;
-      formals = [] ;
-      body = List.rev $9
+    fname = $3 ;
+    formals = [] ;
+    body = List.rev $9
   }}
-
-param_list:
-    ID                    { [$1] }
-  | param_list COMMA ID   { $3 :: $1 } 
 
 params_opt:
     /* nothing */   { [] }
   | param_list      { List.rev $1 }
+
+param_list:
+    ID                    { [$1] }
+  | param_list COMMA ID   { $3 :: $1 } 
 
 stmt_list:
     /* nothing */   { [] }
@@ -79,14 +79,14 @@ expr_stmt:
     expr NEWLINE  { Expr $1 }
 
 select_stmt:
-    IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([])) }
-  | IF LPAREN expr RPAREN stmt ELSE stmt      { If($3, $5, $7) }
+    IF LPAREN expr RPAREN NEWLINE stmt %prec NOELSE   { If($3, $6, Block([])) }
+  | IF LPAREN expr RPAREN NEWLINE stmt ELSE stmt      { If($3, $6, $8) }
 
 assign_stmt:
     ASSIGN ID TO expr NEWLINE       { Assign($2, $4) } 
 
 compound_stmt:
-    INDENT stmt_list DEDENT         { Block(List.rev $2)}
+    INDENT stmt_list NEWLINE DEDENT         { Block(List.rev $2)}
 
 jump_stmt:
     RETURN expr NEWLINE     { Return($2) }

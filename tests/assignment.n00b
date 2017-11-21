@@ -1,5 +1,5 @@
 set integer to 1 + 1
-    set float to 1.0 + 1.5
+set float to 1.0 + 1.5
 set str_easy to "this is a string"
 set str_hard to " \" this is a quote \" \n "
 
