@@ -154,7 +154,7 @@ and str buf = parse
   | _ as char                 { err lexbuf "unrecognized char '%c'" char }
 
 and comment stream = parse
-  | nl                        { token stream lexbuf }
+  | nl+                       { token stream lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
   | _                         { comment stream lexbuf }
 

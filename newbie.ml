@@ -38,8 +38,7 @@ let main () =
         | hd::tl  -> l := tl ; hd 
         | []      -> failwith "sheesh!"
   in
-  let gen_ast = Parser.program cache lexbuf
-  in
+  let gen_ast = Parser.program cache lexbuf in
   (* let gen_sast = Semant.check gen_ast in *)
   match action with
       TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
@@ -48,6 +47,7 @@ let main () =
     (* | LLVIM_IR        -> print_endline (LLvm.string_of_llmodule (Codegen.translate gen_ast)) (* TODO: make gen_sast *) *)
     (* | COMPILE         -> let m = Codegen.translate gen_ast in
          LLvm_analysis.assert_valid_module m; print_string (LLvm.string_of_llmodule m) *)
-    | DEFAULT       -> print_endline (Ast.string_of_program gen_ast)
+    | DEFAULT         ->  print_endline (Scanner.string_of_tokens tokens) ; 
+                          print_endline (Ast.string_of_program gen_ast)
 
 let _ = Printexc.print main ()

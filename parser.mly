@@ -31,14 +31,20 @@
 
 %%
 
+
 program:
-    decls EOF { $1 }
+    decls EOF               { Printf.printf "touch %s - " "decl EOF" ;$1 }
+  | NEWLINE decls           { Printf.printf "touch %s - " "nl decl" ; $2 }
+  | NEWLINE decls NEWLINE   { Printf.printf "touch %s - " "nl decl nl" ;$2 }
 
 decls:
-    /* nothing */ { [], [] }
-  | decls vinit           { ($2 :: fst $1), snd $1 } 
-  | decls fdecl_noparams  { fst $1, ($2 :: snd $1) }
-  | decls fdecl_params    { fst $1, ($2 :: snd $1) }
+    /* nothing */     { [], [] }
+  | decls vinit       { ($2 :: fst $1), snd $1 } 
+  | decls fdecl       { fst $1, ($2 :: snd $1) }
+
+fdecl:
+    fdecl_params      { $1 }
+  | fdecl_noparams    { $1 }
 
 fdecl_params:
     DEF FUNC ID WITH PARAMS LPAREN params_opt RPAREN NEWLINE INDENT stmt_list DEDENT
@@ -79,14 +85,14 @@ expr_stmt:
     expr NEWLINE  { Expr $1 }
 
 select_stmt:
-    IF LPAREN expr RPAREN NEWLINE stmt %prec NOELSE   { If($3, $6, Block([])) }
-  | IF LPAREN expr RPAREN NEWLINE stmt ELSE stmt      { If($3, $6, $8) }
+    IF LPAREN expr RPAREN NEWLINE INDENT stmt %prec NOELSE DEDENT  { If($3, $7, Block([])) }
+  | IF LPAREN expr RPAREN NEWLINE INDENT stmt ELSE stmt DEDENT     { If($3, $7, $9) }
 
 assign_stmt:
     ASSIGN ID TO expr NEWLINE       { Assign($2, $4) } 
 
 compound_stmt:
-    INDENT stmt_list NEWLINE DEDENT         { Block(List.rev $2)}
+    INDENT stmt_list DEDENT         { Block(List.rev $2)}
 
 jump_stmt:
     RETURN expr NEWLINE     { Return($2) }
