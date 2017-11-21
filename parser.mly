@@ -31,14 +31,20 @@
 
 %%
 
+
 program:
-    decls EOF { $1 }
+    decls EOF               { Printf.printf "touch %s - " "decl EOF" ;$1 }
+  | NEWLINE decls           { Printf.printf "touch %s - " "nl decl" ; $2 }
+  | NEWLINE decls NEWLINE   { Printf.printf "touch %s - " "nl decl nl" ;$2 }
 
 decls:
-    /* nothing */ { [], [] }
-  | decls vinit           { ($2 :: fst $1), snd $1 } 
-  | decls fdecl_noparams  { fst $1, ($2 :: snd $1) }
-  | decls fdecl_params    { fst $1, ($2 :: snd $1) }
+    /* nothing */     { [], [] }
+  | decls vinit       { ($2 :: fst $1), snd $1 } 
+  | decls fdecl       { fst $1, ($2 :: snd $1) }
+
+fdecl:
+    fdecl_params      { $1 }
+  | fdecl_noparams    { $1 }
 
 fdecl_params:
     DEF FUNC ID WITH PARAMS LPAREN params_opt RPAREN NEWLINE INDENT stmt_list DEDENT
@@ -51,18 +57,18 @@ fdecl_params:
 fdecl_noparams:
   DEF FUNC ID WITH NO PARAMS NEWLINE INDENT stmt_list DEDENT
   {{
-      fname = $3 ;
-      formals = [] ;
-      body = List.rev $9
+    fname = $3 ;
+    formals = [] ;
+    body = List.rev $9
   }}
-
-param_list:
-    ID                    { [$1] }
-  | param_list COMMA ID   { $3 :: $1 } 
 
 params_opt:
     /* nothing */   { [] }
   | param_list      { List.rev $1 }
+
+param_list:
+    ID                    { [$1] }
+  | param_list COMMA ID   { $3 :: $1 } 
 
 stmt_list:
     /* nothing */   { [] }
@@ -79,8 +85,8 @@ expr_stmt:
     expr NEWLINE  { Expr $1 }
 
 select_stmt:
-    IF LPAREN expr RPAREN stmt %prec NOELSE   { If($3, $5, Block([])) }
-  | IF LPAREN expr RPAREN stmt ELSE stmt      { If($3, $5, $7) }
+    IF LPAREN expr RPAREN NEWLINE INDENT stmt %prec NOELSE DEDENT  { If($3, $7, Block([])) }
+  | IF LPAREN expr RPAREN NEWLINE INDENT stmt ELSE stmt DEDENT     { If($3, $7, $9) }
 
 assign_stmt:
     ASSIGN ID TO expr NEWLINE       { Assign($2, $4) } 
