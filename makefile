@@ -1,4 +1,4 @@
-OBJS =  ast.cmx codegen.cmx parser.cmx scanner.cmx newbie.cmx
+OBJS = ast.cmx codegen.cmx parser.cmx scanner.cmx newbie.cmx
 
 newbie: $(OBJS)
 	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o newbie
