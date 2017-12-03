@@ -3,7 +3,6 @@ module A = Ast
 
 module StringMap = Map.Make(String)
 
-
 let translate (globals, functions) =
   let context = L.global_context () in
   let the_module = L.create_module context "Newbie"

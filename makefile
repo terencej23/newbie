@@ -1,4 +1,4 @@
-OBJS = ast.cmx parser.cmx scanner.cmx newbie.cmx
+OBJS =  ast.cmx codegen.cmx parser.cmx scanner.cmx newbie.cmx
 
 newbie: $(OBJS)
 	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o newbie
@@ -18,17 +18,17 @@ parser.ml parser.mli: parser.mly
 	ocamlfind ocamlopt -c -package llvm $<
 
 
-ast.cmo :
-ast.cmx :
-codegen.cmo : ast.cmo
-codegen.cmx : ast.cmx
-newbie.cmo : scanner.cmo parser.cmi ast.cmo # codegen.cmo
-newbie.cmx : scanner.cmx parser.cmx ast.cmx # codegen.cmx
-parser.cmo : ast.cmo parser.cmi
-parser.cmx : ast.cmx parser.cmi
-scanner.cmo : parser.cmi
-scanner.cmx : parser.cmx
-parser.cmi : ast.cmo
+ast.cmo:
+ast.cmx:
+codegen.cmo: ast.cmo
+codegen.cmx: ast.cmx
+newbie.cmo: scanner.cmo parser.cmi codegen.cmo ast.cmo
+newbie.cmx: scanner.cmx parser.cmx codegen.cmx ast.cmx 
+parser.cmo: ast.cmo parser.cmi
+parser.cmx: ast.cmx parser.cmi
+scanner.cmo: parser.cmi
+scanner.cmx: parser.cmx
+parser.cmi: ast.cmo
 
 
 .PHONY: clean

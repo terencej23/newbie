@@ -33,9 +33,8 @@
 
 
 program:
-    decls EOF               { Printf.printf "touch %s - " "decl EOF" ;$1 }
-  | NEWLINE decls           { Printf.printf "touch %s - " "nl decl" ; $2 }
-  | NEWLINE decls NEWLINE   { Printf.printf "touch %s - " "nl decl nl" ;$2 }
+    decls EOF               { $1 }
+  | NEWLINE decls           { $2 }
 
 decls:
     /* nothing */     { [], [] }
