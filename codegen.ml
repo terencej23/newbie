@@ -150,7 +150,6 @@ let translate (globals, functions) =
         (fun l name typ -> (name, typ) :: l) [] fdecl.A.formals [])
       in
       let formals = 
-        let sformals = StringMap
         List.fold_left2 add_formal StringMap.empty 
           sformals (Array.to_list (L.params the_function))
       in 
