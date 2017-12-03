@@ -143,7 +143,13 @@ let translate (globals, functions) =
 
       let add_local map (name, typ) = 
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
-        StringMap.add name local_var map
+          StringMap.add name local_var map
+        in
+        let formals = [] (* TODO: no params *)
+          (* List.fold_left2 (add_formal StringMap.empty fdecl.A.formals)
+            (Array.to_list (L.params the_function)) *)
+        in 
+        List.fold_left add_local formals [] (* TODO: add semantically checked locals *)
       in
       let sformals = List.rev(List.fold_left2 
         (fun l name typ -> (name, typ) :: l) [] fdecl.A.formals [])
