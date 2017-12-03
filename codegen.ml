@@ -3,7 +3,6 @@ module A = Ast
 
 module StringMap = Map.Make(String)
 
-
 let translate (globals, functions) =
   let context = L.global_context () in
   let the_module = L.create_module context "Newbie"
@@ -155,8 +154,7 @@ let translate (globals, functions) =
       in 
       List.fold_left add_local formals [] (* TODO: add semantically checked locals *)
     in
-    local_vars := _local_vars ;
-  
+    local_vars := _local_vars ;  
 
     (* build the code for each statement in the function *)
     let builder = stmt builder (A.Block fdecl.A.body) in

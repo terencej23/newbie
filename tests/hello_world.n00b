@@ -1,5 +1,8 @@
+
 # output hello world
 define function hello_world with no params
 	print("hello world!")
 
-hello_world()
+# for now we require a main function as entrypoint - parser cant recognize free statements
+define function main with no params
+	hello_world()
