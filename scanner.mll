@@ -90,7 +90,7 @@ let ws = [' ' '\t']
 
 (* TODO: pass in stack arg for tracking indentation *)
 rule token stream = parse
-    nl+ tab* as delimit        { 
+    (nl+ tab*)+ as delimit    { 
                                 L.new_line lexbuf ; 
                                 let toks = de_indent_gen delimit (NEWLINE :: stream) indent_stack in 
                                 token toks lexbuf
