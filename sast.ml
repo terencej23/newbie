@@ -34,7 +34,7 @@ type sprogram = sglobal list * sfdecl list
 
 (* Pretty-printing functions *)
 
-let sstring_of_op = function
+let string_of_sop = function
     Add   -> Printf.sprintf "+"
   | Sub   -> Printf.sprintf "-"
   | Mult  -> Printf.sprintf "*"
@@ -48,56 +48,56 @@ let sstring_of_op = function
   | And   -> Printf.sprintf "and"
   | Or    -> Printf.sprintf "or"
 
-let sstring_of_uop = function
+let string_of_suop = function
     Neg   -> Printf.sprintf "-"
   | Not   -> Printf.sprintf "!"
 
-let rec sstring_of_typ = function
+let rec string_of_typ = function
     Datatype(String)        -> Printf.sprintf "str"
   | Datatype(Int)           -> Printf.sprintf "int"
   | Datatype(Float)         -> Printf.sprintf "float"
   | Datatype(Bool)          -> Printf.sprintf "bool"
   | Datatype(Void)          -> Printf.sprintf "void"
 
-let rec sstring_of_expr = function
-    SIntLit(d, _)            -> Printf.sprintf "%d" d
-  | SFloatLit(f, _)          -> Printf.sprintf "%f" f
-  | SStrLit(s, _)            -> Printf.sprintf "\"%s\"" s
-  | SBoolLit(true, _)        -> Printf.sprintf "true"
-  | SBoolLit(false, _)       -> Printf.sprintf "false"
-  | SId(s, _)                -> Printf.sprintf "%s" s
-  | SBinop(se1, so, se2, _)     -> Printf.sprintf "%s %s %s" 
-                                (sstring_of_expr se1) (sstring_of_op so) (sstring_of_expr se2)
-  | SUnop(so, se, _)           -> Printf.sprintf "%s %s"
-                                (sstring_of_uop so) (sstring_of_expr se)
+let rec string_of_sexpr = function
+    SIntLit(d, _)             -> Printf.sprintf "%d" d
+  | SFloatLit(f, _)           -> Printf.sprintf "%f" f
+  | SStrLit(s, _)             -> Printf.sprintf "\"%s\"" s
+  | SBoolLit(true, _)         -> Printf.sprintf "true"
+  | SBoolLit(false, _)        -> Printf.sprintf "false"
+  | SId(s, _)                 -> Printf.sprintf "%s" s
+  | SBinop(se1, so, se2, _)   -> Printf.sprintf "%s %s %s" 
+                                 (string_of_sexpr se1) (string_of_sop so) (string_of_sexpr se2)
+  | SUnop(so, se, _)          -> Printf.sprintf "%s %s"
+                                 (string_of_suop so) (string_of_sexpr se)
   | SCall(s, se, _)           -> Printf.sprintf "%s(%s)"
-                                s (String.concat ", " (List.map sstring_of_expr se))
-  | SNoexpr                  -> Printf.sprintf "noexpr"
+                                 s (String.concat ", " (List.map string_of_sexpr se))
+  | SNoexpr                   -> Printf.sprintf "noexpr"
 
-let rec sstring_of_stmt = function
-    SBlock(ss)                   -> Printf.sprintf "%s" 
-                                    (String.concat "\n\t" (List.map sstring_of_stmt ss))
-  | SExpr(se, _)                 -> Printf.sprintf "%s"
-                                    (sstring_of_expr se)
-  | SReturn(se, _)               -> Printf.sprintf "return %s" 
-                                    (sstring_of_expr se)
-  | SIf(se, ss, SBlock([]))       -> Printf.sprintf "if (%s)\n\t%s"
-                                    (sstring_of_expr se) (sstring_of_stmt ss)
-  | SIf(se, ss1, ss2)              -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
-                                    (sstring_of_expr se) (sstring_of_stmt ss1) (sstring_of_stmt ss2)
+let rec string_of_sstmt = function
+    SBlock(ss)                  -> Printf.sprintf "%s" 
+                                   (String.concat "\n\t" (List.map string_of_sstmt ss))
+  | SExpr(se, _)                -> Printf.sprintf "%s"
+                                   (string_of_sexpr se)
+  | SReturn(se, _)              -> Printf.sprintf "return %s" 
+                                   (string_of_sexpr se)
+  | SIf(se, ss, SBlock([]))     -> Printf.sprintf "if (%s)\n\t%s"
+                                   (string_of_sexpr se) (string_of_sstmt ss)
+  | SIf(se, ss1, ss2)           -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
+                                   (string_of_sexpr se) (string_of_sstmt ss1) (string_of_sstmt ss2)
 (* | SWhile(se, ss)                -> Printf.sprintf "while (%s)\n\t%s"
                                     (sstring_of_expr se) (sstring_of_stmt ss) *)
-  | SAssign(ss, se, _)            -> Printf.sprintf "set %s to %s"
-                                     ss (sstring_of_expr se)
+  | SAssign(ss, se, _)          -> Printf.sprintf "set %s to %s"
+                                   ss (string_of_sexpr se)
 
-let sstring_of_vinit (s, se, _) = Printf.sprintf "set %s to %s" s (sstring_of_expr se)
+let string_of_sassign (s, se, _) = Printf.sprintf "set %s to %s" s (string_of_sexpr se)
 
-let sstring_of_fdecl sfdecl = Printf.sprintf "define function %s with parameters (%s) -> %s\n\t%s"
+let string_of_sfdecl sfdecl = Printf.sprintf "define function %s with params (%s) -> <%s>\n\t%s"
   (sfdecl.sfname)
-  (String.concat ", "   (List.map (fun (name, typ) -> Printf.sprintf "<%s> %s" (sstring_of_typ typ) name) sfdecl.sformals))
-  (sstring_of_typ sfdecl.styp)
-  (String.concat "\n\t" (List.map sstring_of_stmt sfdecl.sbody))
+  (String.concat ", "   (List.map (fun (name, typ) -> Printf.sprintf "<%s>: %s" (string_of_typ typ) name) sfdecl.sformals))
+  (string_of_typ sfdecl.styp)
+  (String.concat "\n\t" (List.map string_of_sstmt sfdecl.sbody))
 
-let sstring_of_program (vars, funcs) = Printf.sprintf "%s\n\n%s"
-(String.concat "\n" (List.map sstring_of_vinit vars))
-(String.concat "\n" (List.map sstring_of_fdecl funcs))
+let string_of_sprogram (vars, funcs) = Printf.sprintf "%s\n\n%s"
+(String.concat "\n" (List.map string_of_sassign vars))
+(String.concat "\n" (List.map string_of_sfdecl funcs))

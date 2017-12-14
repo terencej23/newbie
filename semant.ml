@@ -17,6 +17,42 @@ type env = {
   env_sfmap: sfdecl StringMap.t;
 }
 
+let string_of_env env =
+  let string_of_fmap fmap =
+    let bindings = StringMap.bindings fmap in
+    let string_of_bindings = 
+      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_fdecl v)) bindings
+      |> String.concat ",\n    "
+    in
+    Printf.sprintf "{\n    %s\n  }" string_of_bindings
+  in
+  let string_of_sfmap sfmap =  
+    let bindings = StringMap.bindings sfmap in
+    let string_of_bindings = 
+      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_sfdecl v)) bindings
+      |> String.concat ",\n    "
+    in
+    Printf.sprintf "{\n    %s\n  }" string_of_bindings
+  in
+  let string_of_vars decls =
+    let bindings = StringMap.bindings decls in
+    let string_of_bindings =
+      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_typ v)) bindings
+      |> String.concat ",\n    "
+    in
+    Printf.sprintf "{\n    %s\n  }" string_of_bindings
+  in
+  Printf.sprintf 
+  "{\n  env_fmap: %s,\n  env_fname: %s,\n  env_return_type: %s,\n  env_globals: %s,\n  env_flocals: %s,\n  env_in_loop: %B,\n  env_set_return: %B,\n  env_sfmap: %s\n}\n" 
+  (string_of_fmap env.env_fmap) 
+  env.env_fname 
+  (string_of_typ env.env_return_type) 
+  (string_of_vars env.env_globals)
+  (string_of_vars env.env_flocals)
+  env.env_in_loop
+  env.env_set_return
+  (string_of_sfmap env.env_sfmap)
+
 let rec expr_to_sexpr expr env =
   match expr with
     IntLit(d)                 -> (SIntLit(d, Datatype(Int)), env)
@@ -75,7 +111,7 @@ and fdecl_to_sfdecl fname arg_type_list env =
   let env = {
     env_globals = env.env_globals;
     env_fmap = env.env_fmap;
-    env_fname = env.env_fname;
+    env_fname = fname;
     env_return_type = Datatype(Void); (* placeholder *)
     env_flocals = flocals;
     env_in_loop = false;
@@ -100,8 +136,6 @@ and fdecl_to_sfdecl fname arg_type_list env =
     in 
     List.rev (List.fold_left2 get_args [] fdecl.formals arg_type_list)
   in
-
-  let () = List.iter (fun (x,y) -> Printf.printf "<%s> %s\n" (sstring_of_typ y) x) sformals in
 
   (* create semantically checked locals for fname *)
   let formals_map = (
@@ -201,12 +235,11 @@ and check_sblock sl env =
   | []    -> (SBlock([SExpr(SNoexpr, Datatype(Void))]), env)
   | _     -> 
     let env_ref = ref(env) in
-
     let convert_stmt l stmt =
       let (new_stmt, env) = stmt_to_sstmt stmt !env_ref in
       env_ref := env ; (new_stmt :: l)
     in
-    let (block, _) = ((List.fold_left convert_stmt [] sl), !env_ref) in
+    let (block, _) = (List.rev @@ (List.fold_left convert_stmt [] sl), !env_ref) in
     (SBlock(block), !env_ref)
 
 (* check and verify return type *)
@@ -219,7 +252,7 @@ and check_return expr env =
     let () = ignore(
       if (env.env_return_type <> typ) then 
         Printf.printf "WARNING: function %s has expected return type of %s but is type %s ..." 
-          env.env_fname (sstring_of_typ env.env_return_type) (sstring_of_typ typ)
+        env.env_fname (string_of_typ env.env_return_type) (string_of_typ typ)
     )
     in
     (SReturn(sexpr, typ), env)
@@ -274,7 +307,7 @@ and check_assign var expr env =
     (
       if (old_typ <> new_typ) then 
         Printf.printf "WARNING: var %s of type %s has been redeclared with type %s ..."
-          var (sstring_of_typ old_typ) (sstring_of_typ new_typ)
+          var (string_of_typ old_typ) (string_of_typ new_typ)
     ) ; (SAssign(var, sexpr, new_typ), env)
 
   (* var not declared, bind typ in map *)
@@ -345,8 +378,6 @@ and check_binop e1 op e2 env =
         (SBinop(se1, op, se2, typ1), env)
       else
         (raise (E.InvalidBinaryOperation))
-  | _ -> 
-      (raise (E.InvalidBinaryOperation))
 
 (* check built-in print type inference *)
 and check_print e_l env = 
@@ -378,7 +409,6 @@ and check_call id e_l env =
         env_ref := env; (sexpr :: l)
       in
       List.fold_left check [] e_l
-        |> List.rev
     in
 
     (* list argument types *)
@@ -403,20 +433,20 @@ and check_call id e_l env =
       let (e_l, env) = expr_list_to_sexpr_list e_l env in
       (SCall(id, e_l, env.env_return_type), env)
 
-    (* called by another function and already called *)
+    (* called by another function and already called/defined (lib) *)
     else if (StringMap.mem id env.env_sfmap) then
       let called_fdecl = StringMap.find id env.env_sfmap in
-      let check new_typ (s, old_typ) =
+      let check new_typ (s, old_typ) = ignore(
         if (new_typ <> old_typ) then
           let msg = Printf.sprintf "argument %s should be of type %s not %s" 
-            s (sstring_of_typ old_typ) (sstring_of_typ new_typ)
-          in
+            s (string_of_typ old_typ) (string_of_typ new_typ)
+          in 
           (raise (E.IncorrectArgumentType msg))
-      else ()
-    in
-    List.iter2 check arg_type_list called_fdecl.sformals ;
-    let (se_l, env) = expr_list_to_sexpr_list e_l env in
-    (SCall(id, se_l, called_fdecl.styp), env)
+      )
+      in
+      List.iter2 check arg_type_list called_fdecl.sformals ;
+      let (se_l, env) = expr_list_to_sexpr_list e_l env in
+      (SCall(id, se_l, called_fdecl.styp), env)
 
   (* called for the first time - semantically check *)
   else 
@@ -453,6 +483,7 @@ and build_fdecl_map functions =
   body = []; } (StringMap.singleton "prints" 
   { fname = "print" ; formals = [("x")];
   body = []; }) )))))
+
   in
   (* make sure no functions have reserved/duplicated names *)
   let check map fdecl = 

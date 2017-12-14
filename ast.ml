@@ -83,13 +83,13 @@ let rec string_of_stmt = function
   | Assign(s, e)                -> Printf.sprintf "set %s to %s"
                                      s (string_of_expr e)
 
-let string_of_vinit (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
+let string_of_assign (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
 
-let string_of_fdecl fdecl = Printf.sprintf "define function %s with parameters (%s)\n\t%s"
+let string_of_fdecl fdecl = Printf.sprintf "define function %s with params (%s)\n\t%s"
   (fdecl.fname)
   (String.concat ", "   (List.map (fun x -> x) fdecl.formals))
   (String.concat "\n\t" (List.map string_of_stmt fdecl.body))
 
-let string_of_program (vars, funcs) = Printf.sprintf "vars: %s\nfuncs: %s"
-(String.concat "\n" (List.map string_of_vinit vars))
+let string_of_program (vars, funcs) = Printf.sprintf "%s\n\n%s"
+(String.concat "\n" (List.map string_of_assign vars))
 (String.concat "\n" (List.map string_of_fdecl funcs))
