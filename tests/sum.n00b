@@ -1,0 +1,8 @@
+define function plus_10 with params (a, b)
+	set c to 9 + 1
+	return a + b + c
+
+define function main with no params
+	set x to 1
+	set y to 1
+	set out to plus_10(x, y)
