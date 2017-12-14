@@ -47,6 +47,7 @@ let main () =
     (* | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_ast)) (* TODO: make gen_sast *) *)
     (* | COMPILE         -> let m = Codegen.translate gen_ast in
          Llvm_analysis.assert_valid_module m; print_string (Llvm.string_of_llmodule m) *)
-    | DEFAULT         ->  print_endline (Scanner.string_of_tokens tokens) 
+    | DEFAULT         ->  print_endline (Ast.string_of_program gen_ast) ;
+                          print_endline (Sast.sstring_of_program gen_sast)
 
 let _ = Printexc.print main ()

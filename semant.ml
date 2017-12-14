@@ -101,6 +101,8 @@ and fdecl_to_sfdecl fname arg_type_list env =
     List.rev (List.fold_left2 get_args [] fdecl.formals arg_type_list)
   in
 
+  let () = List.iter (fun (x,y) -> Printf.printf "<%s> %s\n" (sstring_of_typ y) x) sformals in
+
   (* create semantically checked locals for fname *)
   let formals_map = (
     List.fold_left (fun map (name, typ) -> StringMap.add name typ map) 
