@@ -91,7 +91,7 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val then_bb else_bb builder);
           L.builder_at_end context merge_bb
-    | A.While (predicate, body)  -> 
+(*  | A.While (predicate, body)  -> 
       let pred_bb = L.append_block context "while" the_function in
 
           let body_bb = L.append_block context "while_body" the_function in
@@ -110,6 +110,7 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
           L.builder_at_end context merge_bb
+*)
     | A.Assign (s, e) -> 
                 (match e with
                 | _ -> 
