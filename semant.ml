@@ -123,6 +123,9 @@ and fdecl_to_sfdecl fname arg_type_list env =
     |> List.rev 
   in
 
+  (* semantically check body statments *)
+  let (sstmts, env) = stmt_to_sstmt (Block fdecl.body) env in
+
   (* create semantically checked func *)
   let sfdecl = {
     styp = env.env_return_type;
@@ -179,9 +182,7 @@ and check_if expr s1 s2 env =
   let (sexpr, env) = expr_to_sexpr expr env in
   let typ = sexpr_to_type sexpr in
   let (if_body, env) = stmt_to_sstmt s1 env in
-  let (else_body, env) = stmt_to_sstmt s2 env in
-  if (typ = Datatype(Bool) ) then
-    (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
+let (else_body, env) = stmt_to_sstmt s2 env in if (typ = Datatype(Bool) ) then (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
   else
     (raise (E.InvalidIfStatementType))
 
@@ -200,12 +201,13 @@ and check_sblock sl env =
   | []    -> (SBlock([SExpr(SNoexpr, Datatype(Void))]), env)
   | _     -> 
     let env_ref = ref(env) in
-    let convert_stmts l stmt =
+
+    let convert_stmt l stmt =
       let (new_stmt, env) = stmt_to_sstmt stmt !env_ref in
       env_ref := env ; (new_stmt :: l)
     in
-    let block, env = (List.rev (List.fold_left convert_stmts [] sl), !env_ref) in
-    (SBlock(block), env)
+    let (block, _) = ((List.fold_left convert_stmt [] sl), !env_ref) in
+    (SBlock(block), !env_ref)
 
 (* check and verify return type *)
 and check_return expr env =
@@ -367,7 +369,7 @@ and check_call id e_l env =
   if (not (StringMap.mem id env.env_fmap)) then
     (raise (E.FunctionNotDefined id))
   else
-    let env_ref = ref env in
+    let env_ref = ref(env) in
 
     (* semantically check args *) 
     let _ = 
