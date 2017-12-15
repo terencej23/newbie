@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 OBJS = exceptions.cmx ast.cmx sast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx newbie.cmx
-=======
-OBJS = ast.cmx codegen.cmx parser.cmx scanner.cmx newbie.cmx
->>>>>>> naming module fix -- segmentation fault in codegen
 
 newbie: $(OBJS)
 	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o newbie
