@@ -30,6 +30,8 @@ scanner.cmo: parser.cmi
 scanner.cmx: parser.cmx
 parser.cmi: ast.cmo
 
+node : node.c
+	cc -o strcmp -DBUILD_TEST node.c
 
 .PHONY: clean
 clean:
