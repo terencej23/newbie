@@ -41,13 +41,13 @@ let main () =
   match action with
       TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
     | AST             -> print_endline (Ast.string_of_program gen_ast)
-    | SAST            -> print_endline (Sast.string_of_program gen_sast)
-    | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
+    | SAST            -> print_endline (Sast.string_of_sprogram gen_sast)
+    | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_ast)) (* TODO: make gen_sast *)
     | COMPILE         -> let m = Codegen.translate gen_ast in
          Llvm_analysis.assert_valid_module m; print_string (Llvm.string_of_llmodule m)
     | DEFAULT         -> print_endline (Scanner.string_of_tokens tokens) ; 
                          print_endline (Ast.string_of_program gen_ast) ;
-                         print_endline (Sast.string_of_sprogam gen_sast) ;
+                         print_endline (Sast.string_of_sprogram gen_sast) ;
                          print_endline (Llvm.string_of_llmodule (Codegen.translate gen_ast))
 
 let _ = Printexc.print main ()
