@@ -16,20 +16,20 @@ type expr =
 type stmt = 
     | Block of stmt list
     | If of expr * stmt * stmt
-    | While of expr * stmt
+(*  | While of expr * stmt *)
 (*  | For of expr * expr * expr  *)
     | Expr of expr
     | Return of expr 
     | Assign of string * expr 
 
-type fun_decl =  {
+type fdecl =  {
   fname : string;
   formals : string list;
   body : stmt list;
 }
 
 type global =  string * expr 
-type program = global list * fun_decl list
+type program = global list * fdecl list
 
 
 (* Pretty-printing functions *)
@@ -78,18 +78,18 @@ let rec string_of_stmt = function
                                     (string_of_expr e) (string_of_stmt s)
   | If(e, s1, s2)               -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
                                     (string_of_expr e) (string_of_stmt s1) (string_of_stmt s2)
-  | While(e, s)                 -> Printf.sprintf "while (%s)\n\t%s"
-                                    (string_of_expr e) (string_of_stmt s)
+(*  | While(e, s)                 -> Printf.sprintf "while (%s)\n\t%s" 
+                                    (string_of_expr e) (string_of_stmt s) *)
   | Assign(s, e)                -> Printf.sprintf "set %s to %s"
                                      s (string_of_expr e)
 
-let string_of_vinit (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
+let string_of_assign (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
 
-let string_of_fdecl fdecl = Printf.sprintf "define function %s with parameters (%s)\n\t%s"
+let string_of_fdecl fdecl = Printf.sprintf "define function %s with params (%s)\n\t%s"
   (fdecl.fname)
   (String.concat ", "   (List.map (fun x -> x) fdecl.formals))
   (String.concat "\n\t" (List.map string_of_stmt fdecl.body))
 
-let string_of_program (vars, funcs) = Printf.sprintf "vars: %s\nfuncs: %s"
-(String.concat "\n" (List.map string_of_vinit vars))
+let string_of_program (vars, funcs) = Printf.sprintf "%s\n\n%s"
+(String.concat "\n" (List.map string_of_assign vars))
 (String.concat "\n" (List.map string_of_fdecl funcs))

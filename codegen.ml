@@ -91,7 +91,7 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val then_bb else_bb builder);
           L.builder_at_end context merge_bb
-    | A.While (predicate, body)  -> 
+(*  | A.While (predicate, body)  -> 
       let pred_bb = L.append_block context "while" the_function in
 
           let body_bb = L.append_block context "while_body" the_function in
@@ -110,6 +110,7 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
           L.builder_at_end context merge_bb
+*)
     | A.Assign (s, e) -> 
                 (match e with
                 | _ -> 
@@ -136,7 +137,6 @@ let translate (globals, functions) =
     let _local_vars =
       let add_formal map (name, typ) v =
         L.set_value_name name v ;
-
         let local = L.build_alloca (ltype_of_typ typ) name builder in
         ignore(L.build_store v local builder); StringMap.add name local map
       in
@@ -145,6 +145,7 @@ let translate (globals, functions) =
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
         StringMap.add name local_var map
       in
+
       let sformals = List.rev(List.fold_left2 
         (fun l name typ -> (name, typ) :: l) [] fdecl.A.formals [])
       in
