@@ -167,9 +167,6 @@ and fdecl_to_sfdecl fname arg_type_list env =
   }
   in
 
-  (* DEBUG *)
-  let _ = Printf.printf "%s\n" (string_of_sfdecl sfdecl) in
-
   (* return the env with updated semantic func map *) 
   let new_env = {
     env_fmap = env.env_fmap;
@@ -239,7 +236,7 @@ and check_sblock sl env =
       let (new_stmt, env) = stmt_to_sstmt stmt !env_ref in
       env_ref := env ; (new_stmt :: l)
     in
-    let (block, _) = ((List.fold_left convert_stmt [] sl), !env_ref) in
+    let (block, _) = (List.rev @@ (List.fold_left convert_stmt [] sl), !env_ref) in
     (SBlock(block), !env_ref)
 
 (* check and verify return type *)

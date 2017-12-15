@@ -92,9 +92,9 @@ let rec string_of_sstmt = function
 
 let string_of_sassign (s, se, _) = Printf.sprintf "set %s to %s" s (string_of_sexpr se)
 
-let string_of_sfdecl sfdecl = Printf.sprintf "define function %s with params (%s) -> %s\n\t%s"
+let string_of_sfdecl sfdecl = Printf.sprintf "define function %s with params (%s) -> <%s>\n\t%s"
   (sfdecl.sfname)
-  (String.concat ", "   (List.map (fun (name, typ) -> Printf.sprintf "<%s> %s" (string_of_typ typ) name) sfdecl.sformals))
+  (String.concat ", "   (List.map (fun (name, typ) -> Printf.sprintf "<%s>: %s" (string_of_typ typ) name) sfdecl.sformals))
   (string_of_typ sfdecl.styp)
   (String.concat "\n\t" (List.map string_of_sstmt sfdecl.sbody))
 
