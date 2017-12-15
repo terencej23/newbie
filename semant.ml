@@ -65,10 +65,7 @@ let rec expr_to_sexpr expr env =
   | Binop(e1, op, e2)         -> (check_binop e1 op e2 env)
   (* built-in functions *)
   | Call("print", e_l)        -> (check_print e_l env)
-  | Call(s, e_l)              -> 
-      (* DEBUG *)
-      Printf.printf "%s(%s)\n" s (String.concat ", " @@ List.map string_of_expr e_l) ; 
-                                  (check_call s e_l env)
+  | Call(s, e_l)              -> (check_call s e_l env)
 
 and sexpr_to_type = function
     SIntLit(_, typ)           -> typ
@@ -160,7 +157,6 @@ and fdecl_to_sfdecl fname arg_type_list env =
   (* semantically check body statments *)
   let (sstmts, env) = stmt_to_sstmt (Block fdecl.body) env in
 
-
   (* create semantically checked func *)
   let sfdecl = {
     styp = env.env_return_type;
@@ -171,7 +167,8 @@ and fdecl_to_sfdecl fname arg_type_list env =
   }
   in
 
-  (* let _ = Printf.printf "%s\n" (string_of_sfdecl sfdecl) in *)
+  (* DEBUG *)
+  let _ = Printf.printf "%s\n" (string_of_sfdecl sfdecl) in
 
   (* return the env with updated semantic func map *) 
   let new_env = {
@@ -219,9 +216,7 @@ and check_if expr s1 s2 env =
   let (sexpr, env) = expr_to_sexpr expr env in
   let typ = sexpr_to_type sexpr in
   let (if_body, env) = stmt_to_sstmt s1 env in
-  let (else_body, env) = stmt_to_sstmt s2 env in
-  if (typ = Datatype(Bool) ) then
-    (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
+let (else_body, env) = stmt_to_sstmt s2 env in if (typ = Datatype(Bool) ) then (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
   else
     (raise (E.InvalidIfStatementType))
 
@@ -239,14 +234,13 @@ and check_sblock sl env =
   match sl with
   | []    -> (SBlock([SExpr(SNoexpr, Datatype(Void))]), env)
   | _     -> 
-    let env_ref = ref env in
+    let env_ref = ref(env) in
     let convert_stmt l stmt =
       let (new_stmt, env) = stmt_to_sstmt stmt !env_ref in
       env_ref := env ; (new_stmt :: l)
     in
-    let (block, env) = ((List.rev @@ List.fold_left convert_stmt [] sl), !env_ref) in
-    let _ = Printf.printf "%s\n" (string_of_env env) in
-    (SBlock(block), env)
+    let (block, _) = ((List.fold_left convert_stmt [] sl), !env_ref) in
+    (SBlock(block), !env_ref)
 
 (* check and verify return type *)
 and check_return expr env =
@@ -255,7 +249,6 @@ and check_return expr env =
 
   (* if return type has been set, check new return type *)
   if (env.env_set_return) then
-    let _ = Printf.printf "%s return already set to %s\n" env.env_fname (string_of_typ env.env_return_type) in
     let () = ignore(
       if (env.env_return_type <> typ) then 
         Printf.printf "WARNING: function %s has expected return type of %s but is type %s ..." 
@@ -266,7 +259,6 @@ and check_return expr env =
 
   (* no return type set, so set it *)
   else
-    let _ = Printf.printf "%s return just set to %s\n" env.env_fname (string_of_typ typ) in
     let new_env = {
       env_fmap = env.env_fmap;
       env_fname = env.env_fname;
@@ -408,7 +400,7 @@ and check_call id e_l env =
   if (not (StringMap.mem id env.env_fmap)) then
     (raise (E.FunctionNotDefined id))
   else
-    let env_ref = ref env in
+    let env_ref = ref(env) in
 
     (* semantically check args *) 
     let _ = 
