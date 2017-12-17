@@ -27,8 +27,8 @@ let translate (globals, functions) =
     in
 
     (* Declare print *)
-    let print_t = L.function_type void_t [| str_t |] in
-    let print_func = L.declare_function "printstr" print_t the_module in
+    let print_t = L.var_arg_function_type i32_t [| str_t |] in
+    let print_func = L.declare_function "printf" print_t the_module in
 
     (* Format strings for printing *) 
     let str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder in
@@ -59,7 +59,7 @@ let translate (globals, functions) =
       | S.SIntLit (i, _)  -> L.const_int i32_t i
       | S.SCall("printstr", [e], _) -> 
         L.build_call print_func [| str_format_str builder; (expr builder e)|]
-        "printstr" builder
+        "printf" builder
       | S.SCall (f, act, _ ) ->
             let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
