@@ -12,6 +12,7 @@ let translate (globals, functions) =
       and i32_t  = L.i32_type     context
       and i1_t   = L.i1_type      context
       and void_t = L.void_type    context
+      and float_t = L.double_type context 
       and str_t  = L.pointer_type   (L.i8_type context) 
     in
 
@@ -24,6 +25,7 @@ let translate (globals, functions) =
       | A.Datatype(A.Bool)  ->  i1_t
       | A.Datatype(A.Void)  ->  void_t
       | A.Datatype(A.String)  ->  str_t
+      | A.Datatype(A.Float) -> float_t 
     in
 
     (* Declare print *)
@@ -31,7 +33,10 @@ let translate (globals, functions) =
     let print_func = L.declare_function "printf" print_t the_module in
 
     (* Format strings for printing *) 
-    let str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder in
+    let str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder 
+    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder
+    and int_format_str builder = L.build_global_stringptr "%d\n" "fmt" builder in
+
 
     (* Define each function (arguments and return type) so we can call it *)
     let function_decls = 
@@ -56,9 +61,19 @@ let translate (globals, functions) =
         S.SBoolLit(b, _)  -> L.const_int i1_t (if b then 1 else 0)
       | S.SStrLit (s, _)  -> L.build_global_stringptr s "string" builder
       | S.SNoexpr    -> L.const_int i32_t 0
+      | S.SFloatLit(f, _) -> L.const_float float_t f 
       | S.SIntLit (i, _)  -> L.const_int i32_t i
       | S.SCall("printstr", [e], _) -> 
         L.build_call print_func [| str_format_str builder; (expr builder e)|]
+        "printf" builder
+      | S.SCall("printint", [e], _) -> 
+        L.build_call print_func [| int_format_str builder; (expr builder e)|]
+        "printf" builder
+      | S.SCall("printfloat", [e], _) -> 
+        L.build_call print_func [| float_format_str builder; (expr builder e)|]
+        "printf" builder
+      | S.SCall("printbool", [e], _) -> 
+        L.build_call print_func [| int_format_str builder; (expr builder e)|]
         "printf" builder
       | S.SCall (f, act, _ ) ->
             let (fdef, fdecl) = StringMap.find f function_decls in
