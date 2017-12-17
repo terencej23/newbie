@@ -28,7 +28,7 @@ let translate (globals, functions) =
 
     (* Declare print *)
     let print_t = L.function_type void_t [| str_t |] in
-    let print_func = L.declare_function "print" print_t the_module in
+    let print_func = L.declare_function "printstr" print_t the_module in
 
     (* Format strings for printing *) 
     let str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder in
@@ -57,9 +57,9 @@ let translate (globals, functions) =
       | S.SStrLit (s, _)  -> L.build_global_stringptr s "string" builder
       | S.SNoexpr    -> L.const_int i32_t 0
       | S.SIntLit (i, _)  -> L.const_int i32_t i
-      | S.SCall("print", [e], _) -> 
+      | S.SCall("printstr", [e], _) -> 
         L.build_call print_func [| str_format_str builder; (expr builder e)|]
-        "print" builder
+        "printstr" builder
       | S.SCall (f, act, _ ) ->
             let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
@@ -119,10 +119,10 @@ let translate (globals, functions) =
             List.fold_left add_local formals fdecl.S.slocals 
         in  
         local_vars := _local_vars;
-       (*  
+        
         (* Build the code for each statement in the function *)
         let builder = stmt builder (S.SBlock fdecl.S.sbody) in
-      *)
+     
         (* Add a return if the last block falls off the end *)
         add_terminal builder (match fdecl.S.styp with
             A.Datatype(A.Void) -> L.build_ret_void
