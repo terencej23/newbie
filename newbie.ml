@@ -48,5 +48,4 @@ let main () =
     | DEFAULT         ->  print_endline (Scanner.string_of_tokens tokens) ; 
                           print_endline (Ast.string_of_program gen_ast) ;
                           print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
-
 let _ = Printexc.print main ()
