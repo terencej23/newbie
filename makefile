@@ -1,4 +1,12 @@
+UNAME := $(uname)
+ifeq ($(UNAME), "Darwin")
+	export LLI="/usr/local/opt/llvm/bin/lli"
+else
+	export LLI="lli"
+endif
+
 OBJS = exceptions.cmx ast.cmx sast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx newbie.cmx
+
 .PHONY: all
 all: newbie print.o
 

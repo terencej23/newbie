@@ -20,11 +20,12 @@ let main () =
     else                                                                        (* error *)
       (raise (Exceptions.InvalidExecFormat("invalid format ./newbie [-t] path_to_file")))
   in
-  let get_channel_from = function
-      DEFAULT     -> open_in (Sys.argv.(1))
-    | _           -> open_in (Sys.argv.(2))
+  let fname = 
+    match action with
+      DEFAULT     -> Sys.argv.(1)
+    | _           -> Sys.argv.(2)
   in
-  let lexbuf = Lexing.from_channel (get_channel_from action) in
+  let lexbuf = Lexing.from_channel (open_in fname) in
   let tokens = List.rev (Scanner.token [] lexbuf) in 
   let cache =                                                                   (* finesse *)
     let l = ref [] in
@@ -38,16 +39,22 @@ let main () =
   in
   let gen_ast = Parser.program cache lexbuf in
   let gen_sast = Semant.check gen_ast in
+  let the_module = Codegen.translate gen_sast in
   match action with
-      TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
-    | AST             -> print_endline (Ast.string_of_program gen_ast)
-    | SAST            -> print_endline (Sast.string_of_sprogram gen_sast)
-    | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
-    | COMPILE         -> let m = Codegen.translate gen_sast in
-         Llvm_analysis.assert_valid_module m; print_string (Llvm.string_of_llmodule m)
-    | DEFAULT         -> (* print_endline (Scanner.string_of_tokens tokens) ; 
-                         print_endline (Ast.string_of_program gen_ast) ;
-                         print_endline (Sast.string_of_sprogram gen_sast) ; *)
-                         print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
+    TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
+  | AST             -> print_endline (Ast.string_of_program gen_ast)
+  | SAST            -> print_endline (Sast.string_of_sprogram gen_sast)
+  | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule the_module)
+  | COMPILE         -> Llvm_analysis.assert_valid_module the_module ; 
+                       print_string (Llvm.string_of_llmodule the_module)
+  | DEFAULT         -> Llvm_analysis.assert_valid_module the_module ; 
+      let llvm_code = Llvm.string_of_llmodule the_module in
+      let ll_fname =
+        let basename = Filename.basename fname in
+        (Filename.remove_extension basename) ^ ".ll"
+      in
+      let outFile = open_out (ll_fname) in
+      Printf.fprintf outFile "%s\n" (llvm_code) ; close_out outFile ;           (* write out to file *)
+      ignore(Sys.command (Printf.sprintf "$LLI %s" ll_fname))                   (* run llvm interpreter - set var in makefile *)
 
 let _ = Printexc.print main ()
