@@ -1,7 +1,17 @@
+UNAME := $(uname)
+ifeq ($(UNAME), "Darwin")
+	export LLI="/usr/local/opt/llvm/bin/lli"
+else
+	export LLI="lli"
+endif
+
 OBJS = exceptions.cmx ast.cmx sast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx newbie.cmx
 
+.PHONY: all
+all: newbie print.o
+
 newbie: $(OBJS)
-	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o newbie
+	ocamlfind ocamlopt -linkpkg -fPIC -package llvm -package llvm.analysis $(OBJS) -o newbie
 
 scanner.ml: scanner.mll
 	ocamllex scanner.mll
@@ -42,5 +52,7 @@ clean:
 	ocamlbuild -clean
 	rm -rf *.diff newbie scanner.ml parser.ml parser.mli
 	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.s *.ll *.out *.exe
+	rm -rf print
 
-all: newbie
+print: print.c
+	gcc -o print print.c
