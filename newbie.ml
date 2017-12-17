@@ -1,6 +1,6 @@
 (* top-level of newbie compiler *)
 
-type actions = TOKEN  | AST | LLVIM_IR | COMPILE | SAST | DEFAULT
+type actions = TOKEN  | AST | SAST | LLVIM_IR | COMPILE | DEFAULT
 
 let main () =
   let is_tag str =
@@ -18,7 +18,7 @@ let main () =
     else if (Array.length Sys.argv = 2 && not (is_tag Sys.argv.(1))) then       (* no tag *)
       DEFAULT
     else                                                                        (* error *)
-      raise (Failure("invalid format ./newbie [-tag] path_to_file"))
+      (raise (Exceptions.InvalidExecFormat("invalid format ./newbie [-t] path_to_file")))
   in
   let get_channel_from = function
       DEFAULT     -> open_in (Sys.argv.(1))
@@ -34,18 +34,20 @@ let main () =
       | []      -> 
         match (tokens) with
         | hd::tl  -> l := tl ; hd 
-        | []      -> failwith "sheesh!"
+        | []      -> (raise (Exceptions.MalformedTokens))
   in
   let gen_ast = Parser.program cache lexbuf in
   let gen_sast = Semant.check gen_ast in
   match action with
       TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
     | AST             -> print_endline (Ast.string_of_program gen_ast)
-   (*  | SAST            -> print_endline (Sast.string_of_program gen_sast) *)
-    | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast)) (* TODO: make gen_sast *)
+    | SAST            -> print_endline (Sast.string_of_sprogram gen_sast)
+    | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
     | COMPILE         -> let m = Codegen.translate gen_sast in
          Llvm_analysis.assert_valid_module m; print_string (Llvm.string_of_llmodule m)
-    | DEFAULT         ->  print_endline (Scanner.string_of_tokens tokens) ; 
-                          print_endline (Ast.string_of_program gen_ast) ;
-                          print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
+    | DEFAULT         -> print_endline (Scanner.string_of_tokens tokens) ; 
+                         print_endline (Ast.string_of_program gen_ast) ;
+                         print_endline (Sast.string_of_sprogram gen_sast) ;
+                         print_endline (Llvm.string_of_llmodule (Codegen.translate gen_sast))
+
 let _ = Printexc.print main ()
