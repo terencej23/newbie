@@ -82,7 +82,6 @@ let translate (globals, functions) =
 
 
   (* Declare each global variable; remember its value in a map *)
-    	
     let _global_vars =
         let (f, _) = StringMap.find "main" function_decls in
         let builder = L.builder_at_end context (L.entry_block f) in

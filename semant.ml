@@ -17,42 +17,6 @@ type env = {
   env_sfmap: sfdecl StringMap.t;
 }
 
-let string_of_env env =
-  let string_of_fmap fmap =
-    let bindings = StringMap.bindings fmap in
-    let string_of_bindings = 
-      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_fdecl v)) bindings
-      |> String.concat ",\n    "
-    in
-    Printf.sprintf "{\n    %s\n  }" string_of_bindings
-  in
-  let string_of_sfmap sfmap =  
-    let bindings = StringMap.bindings sfmap in
-    let string_of_bindings = 
-      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_sfdecl v)) bindings
-      |> String.concat ",\n    "
-    in
-    Printf.sprintf "{\n    %s\n  }" string_of_bindings
-  in
-  let string_of_vars decls =
-    let bindings = StringMap.bindings decls in
-    let string_of_bindings =
-      List.map (fun (k,v) -> Printf.sprintf "%s: %s" k (string_of_typ v)) bindings
-      |> String.concat ",\n    "
-    in
-    Printf.sprintf "{\n    %s\n  }" string_of_bindings
-  in
-  Printf.sprintf 
-  "{\n  env_fmap: %s,\n  env_fname: %s,\n  env_return_type: %s,\n  env_globals: %s,\n  env_flocals: %s,\n  env_in_loop: %B,\n  env_set_return: %B,\n  env_sfmap: %s\n}\n" 
-  (string_of_fmap env.env_fmap) 
-  env.env_fname 
-  (string_of_typ env.env_return_type) 
-  (string_of_vars env.env_globals)
-  (string_of_vars env.env_flocals)
-  env.env_in_loop
-  env.env_set_return
-  (string_of_sfmap env.env_sfmap)
-
 let rec expr_to_sexpr expr env =
   match expr with
     IntLit(d)                 -> (SIntLit(d, Datatype(Int)), env)
@@ -119,6 +83,9 @@ and fdecl_to_sfdecl fname arg_type_list env =
     env_sfmap = env.env_sfmap;
   }
   in
+
+  (* semantically check body statments *)
+  let (sstmts, env) = stmt_to_sstmt (Block fdecl.body) env in
 
   (* create semantically checked formals for fname *)
   report_duplicate(fdecl.formals) ;
@@ -213,7 +180,9 @@ and check_if expr s1 s2 env =
   let (sexpr, env) = expr_to_sexpr expr env in
   let typ = sexpr_to_type sexpr in
   let (if_body, env) = stmt_to_sstmt s1 env in
-let (else_body, env) = stmt_to_sstmt s2 env in if (typ = Datatype(Bool) ) then (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
+  let (else_body, env) = stmt_to_sstmt s2 env in 
+  if (typ = Datatype(Bool) ) then 
+    (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
   else
     (raise (E.InvalidIfStatementType))
 
@@ -477,7 +446,7 @@ and build_fdecl_map functions =
   { fname = "num"; formals = [("x")];
   body = []; } (StringMap.add "bool"
   { fname = "bool"; formals = [("x")];
-  body = []; } (StringMap.singleton "prints" 
+  body = []; } (StringMap.singleton "printstr" 
   { fname = "print" ; formals = [("x")];
   body = []; }) )))))
 

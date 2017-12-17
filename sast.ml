@@ -14,8 +14,11 @@ type sexpr =
 type sstmt =
     SBlock of sstmt list
   | SIf of sexpr * sstmt * sstmt
-(* | SWhile of sexpr * sstmt *)
-(* | SFor of sexpr * expr * expr *)
+(*
+  | SWhile of sexpr * sstmt
+  | SFor of sexpr * sexpr * sexpr * stmt
+  | SIter of sexpr * sstmt
+*)
   | SAssign of string * sexpr * datatype
   | SExpr of sexpr * datatype
   | SReturn of sexpr * datatype
@@ -32,7 +35,7 @@ type sglobal = string * sexpr * datatype
 type sprogram = sglobal list * sfdecl list
 
 
-(* Pretty-printing functions *)
+(* pretty printing functions *)
 
 let string_of_sop = function
     Add   -> Printf.sprintf "+"
@@ -85,8 +88,10 @@ let rec string_of_sstmt = function
                                    (string_of_sexpr se) (string_of_sstmt ss)
   | SIf(se, ss1, ss2)           -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
                                    (string_of_sexpr se) (string_of_sstmt ss1) (string_of_sstmt ss2)
-(* | SWhile(se, ss)                -> Printf.sprintf "while (%s)\n\t%s"
-                                    (sstring_of_expr se) (sstring_of_stmt ss) *)
+(*
+  | SWhile(se, ss)                -> Printf.sprintf "while (%s)\n\t%s"
+                                    (string_of_sexpr se) (string_of_sstmt ss)
+*)
   | SAssign(ss, se, _)          -> Printf.sprintf "set %s to %s"
                                    ss (string_of_sexpr se)
 
@@ -99,5 +104,5 @@ let string_of_sfdecl sfdecl = Printf.sprintf "define function %s with params (%s
   (String.concat "\n\t" (List.map string_of_sstmt sfdecl.sbody))
 
 let string_of_sprogram (vars, funcs) = Printf.sprintf "%s\n\n%s"
-(String.concat "\n" (List.map string_of_sassign vars))
-(String.concat "\n" (List.map string_of_sfdecl funcs))
+  (String.concat "\n" (List.map string_of_sassign vars))
+  (String.concat "\n" (List.map string_of_sfdecl funcs))

@@ -1,25 +1,11 @@
 {
   module L = Lexing
   module B = Buffer
+  module E = Exceptions
   open Parser
 
   let buf_size = 100 (* default buffer size *) 
 
-  (* TODO: move to separate module for err reporting ~begin *)
-  let pos lexbuf = 
-    let p = lexbuf.L.lex_curr_p in
-      (* filename:line:col *)
-      Printf.sprintf "%s:%d:%d" p.L.pos_fname p.L.pos_lnum (p.L.pos_cnum - p.L.pos_bol) let set_fname fname lexbuf = (
-      lexbuf.L.lex_curr_p <- { lexbuf.L.lex_curr_p with L.pos_fname = fname } ;
-      lexbuf
-    )
-
-  let err lexbuf format =
-    Printf.ksprintf (fun msg -> raise (Failure((pos lexbuf)^" "^msg))) format
-
-  (* ~end *)
-
-  (* TODO: generation of INDENT/DEDENT tokens - move module ~begin *)
   let indent_stack = Stack.create ()
   let () = Stack.push 0 indent_stack 
 
@@ -66,18 +52,15 @@
     in 
     token_gen token_stream to_generate 
 
-    let eof_dedent token_stream stack = (* add DEDENT tokens to stream at eof *)
-      let peek = Stack.top stack in
-      let rec token_gen stream = function
-          0     -> EOF :: stream 
-        | _     -> 
-          let _ = Stack.pop stack in
-          token_gen (DEDENT :: stream) (Stack.top stack)
-      in
-      token_gen token_stream peek
-
-  (* ~end *)
-
+  let eof_dedent token_stream stack = (* add DEDENT tokens to stream at eof *)
+    let peek = Stack.top stack in
+    let rec token_gen stream = function
+        0     -> EOF :: stream 
+      | _     -> 
+        let _ = Stack.pop stack in
+        token_gen (DEDENT :: stream) (Stack.top stack)
+    in
+    token_gen token_stream peek
 }
 
 let digit = ['0'-'9']
@@ -98,13 +81,12 @@ rule token stream = parse
   | ws+                       { token stream lexbuf }
   | "if"                      { let toks = IF     :: stream in token toks lexbuf }
   | "else"                    { let toks = ELSE   :: stream in token toks lexbuf }
-(*   | "else if"                 { let toks = ELIF   :: stream in token toks lexbuf } *)
   | "true"                    { let toks = TRUE   :: stream in token toks lexbuf }
   | "false"                   { let toks = FALSE  :: stream in token toks lexbuf }
-(*   | "for"                     { let toks = FOR    :: stream in token toks lexbuf } *)
-(*   | "while"                   { let toks = WHILE  :: stream in token toks lexbuf } *)
-(*   | "each"                    { let toks = EACH   :: stream in token toks lexbuf } *)
-(*   | "in"                      { let toks = IN     :: stream in token toks lexbuf } *)
+  | "for"                     { let toks = FOR    :: stream in token toks lexbuf }
+  | "while"                   { let toks = WHILE  :: stream in token toks lexbuf }
+  | "each"                    { let toks = EACH   :: stream in token toks lexbuf }
+  | "in"                      { let toks = IN     :: stream in token toks lexbuf }
   | "and"                     { let toks = AND    :: stream in token toks lexbuf }
   | "or"                      { let toks = OR     :: stream in token toks lexbuf }
   | "no"                      { let toks = NO     :: stream in token toks lexbuf }
@@ -135,13 +117,13 @@ rule token stream = parse
   | "/*"                      { multi_comment stream lexbuf } 
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
-(*   | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf } *)
+  | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
   | id as ident               { let toks = ID(ident) :: stream in token toks lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
-  | _ as char                 { err lexbuf "unrecognized char '%c'" char }
+  | _ as char                 { raise (E.SyntaxError((Printf.sprintf "unrecognized char '%c'" char))) }
 
 and str buf = parse
-  | [^ '"' '\r' '\n' '\\' ]+ as text  
+  | [^ '"' '\r' '\n' '\\' ]+ as text
                               { B.add_string buf text ; str buf lexbuf }
   | nl as newline             { B.add_string buf newline ; L.new_line lexbuf ; str buf lexbuf }
   | ('\\' '"')                { B.add_char buf '"' ; str buf lexbuf }
@@ -150,8 +132,8 @@ and str buf = parse
   | ('\\' 't')                { B.add_char buf '\t' ; str buf lexbuf }
   | '\\'                      { B.add_char buf '\\' ; str buf lexbuf }
   | '"'                       { B.contents buf } (* return *)
-  | eof                       { err lexbuf "eof within str" }
-  | _ as char                 { err lexbuf "unrecognized char '%c'" char }
+  | eof                       { raise (E.SyntaxError("eof within str")) }
+  | _ as char                 { raise (E.SyntaxError((Printf.sprintf "unrecognized char '%c'" char))) }
 
 and comment stream = parse
   | nl+                       { token stream lexbuf }
@@ -160,74 +142,59 @@ and comment stream = parse
 
 and multi_comment stream = parse
   | "*/"                      { token stream lexbuf }
-  | eof                       { err lexbuf "eof within comment" }
+  | eof                       { raise (E.SyntaxError("eof within comment")) }
   | _                         { multi_comment stream lexbuf }
 
 {
-  (* TODO: port to debugging module *)
-  let to_string = function
-      STRLIT(str)     -> Printf.sprintf "STRLIT(%s)" (String.escaped str)
-    | INTLIT(num)     -> Printf.sprintf "INTLIT(%d)" num
-    | FLOATLIT(num)   -> Printf.sprintf "FLOATLIT(%f)" num
-    | ID(str)         -> Printf.sprintf "ID(%s)" str
-(*     | ATTR            -> Printf.sprintf "ATTR"  *)
-    | ASSIGN          -> Printf.sprintf "ASSIGN"
-    | DEF             -> Printf.sprintf "DEF"
-    | WITH            -> Printf.sprintf "WITH"
-    | PARAMS          -> Printf.sprintf "PARAMS"
-    | EQUALS          -> Printf.sprintf "EQUAL"
-    | GT              -> Printf.sprintf "GT"
-    | LT              -> Printf.sprintf "LT"
-    | GEQ             -> Printf.sprintf "GEQ"
-    | LEQ             -> Printf.sprintf "LEQ"
-    | PLUS            -> Printf.sprintf "PLUS"
-    | MINUS           -> Printf.sprintf "MINUS"
-    | NEG             -> Printf.sprintf "NEG"
-    | MULT            -> Printf.sprintf "MULT"
-    | DIVIDE          -> Printf.sprintf "DIVIDE"
-    | MOD             -> Printf.sprintf "MOD"
-    | IF              -> Printf.sprintf "IF"
-    | ELSE            -> Printf.sprintf "ELSE"
-(*     | ELIF            -> Printf.sprintf "ELIF" *)
-    | TRUE            -> Printf.sprintf "TRUE"
-    | FALSE           -> Printf.sprintf "FALSE"
-(*     | FOR             -> Printf.sprintf "FOR" *)
-(*     | WHILE           -> Printf.sprintf "WHILE" *)
-(*     | IN              -> Printf.sprintf "IN" *)
-(*     | EACH            -> Printf.sprintf "EACH" *)
-    | TO              -> Printf.sprintf "TO"
-    | AND             -> Printf.sprintf "AND"
-    | OR              -> Printf.sprintf "OR"
-    | NOT             -> Printf.sprintf "NOT"
-    | NO              -> Printf.sprintf "NO"
-    | FUNC            -> Printf.sprintf "FUNC"
-    | RETURN          -> Printf.sprintf "RETURN"
-    | COMMA           -> Printf.sprintf "COMMA"
-    | LPAREN          -> Printf.sprintf "LPAREN"
-    | RPAREN          -> Printf.sprintf "RPAREN"
-    | INDENT          -> Printf.sprintf "INDENT"
-    | DEDENT          -> Printf.sprintf "DEDENT"
-    | NEWLINE         -> Printf.sprintf "NEWLINE"
-    | EOF             -> Printf.sprintf "EOF"
 
-  let string_of_tokens tokens = 
-    List.map (fun elem -> to_string elem) tokens
+ (* pretty printing functions *) 
+ 
+ let string_of_token = function
+    STRLIT(str)     -> Printf.sprintf "STRLIT(%s)" (String.escaped str)
+  | INTLIT(num)     -> Printf.sprintf "INTLIT(%d)" num
+  | FLOATLIT(num)   -> Printf.sprintf "FLOATLIT(%f)" num
+  | ID(str)         -> Printf.sprintf "ID(%s)" str
+  | ATTR            -> Printf.sprintf "ATTR"
+  | ASSIGN          -> Printf.sprintf "ASSIGN"
+  | DEF             -> Printf.sprintf "DEF"
+  | WITH            -> Printf.sprintf "WITH"
+  | PARAMS          -> Printf.sprintf "PARAMS"
+  | EQUALS          -> Printf.sprintf "EQUAL"
+  | GT              -> Printf.sprintf "GT"
+  | LT              -> Printf.sprintf "LT"
+  | GEQ             -> Printf.sprintf "GEQ"
+  | LEQ             -> Printf.sprintf "LEQ"
+  | PLUS            -> Printf.sprintf "PLUS"
+  | MINUS           -> Printf.sprintf "MINUS"
+  | NEG             -> Printf.sprintf "NEG"
+  | MULT            -> Printf.sprintf "MULT"
+  | DIVIDE          -> Printf.sprintf "DIVIDE"
+  | MOD             -> Printf.sprintf "MOD"
+  | IF              -> Printf.sprintf "IF"
+  | ELSE            -> Printf.sprintf "ELSE"
+  | TRUE            -> Printf.sprintf "TRUE"
+  | FALSE           -> Printf.sprintf "FALSE"
+  | FOR             -> Printf.sprintf "FOR"
+  | WHILE           -> Printf.sprintf "WHILE"
+  | IN              -> Printf.sprintf "IN"
+  | EACH            -> Printf.sprintf "EACH"
+  | TO              -> Printf.sprintf "TO"
+  | AND             -> Printf.sprintf "AND"
+  | OR              -> Printf.sprintf "OR"
+  | NOT             -> Printf.sprintf "NOT"
+  | NO              -> Printf.sprintf "NO"
+  | FUNC            -> Printf.sprintf "FUNC"
+  | RETURN          -> Printf.sprintf "RETURN"
+  | COMMA           -> Printf.sprintf "COMMA"
+  | LPAREN          -> Printf.sprintf "LPAREN"
+  | RPAREN          -> Printf.sprintf "RPAREN"
+  | INDENT          -> Printf.sprintf "INDENT"
+  | DEDENT          -> Printf.sprintf "DEDENT"
+  | NEWLINE         -> Printf.sprintf "NEWLINE"
+  | EOF             -> Printf.sprintf "EOF"
+
+let string_of_tokens tokens = 
+  List.map (fun tok -> string_of_token tok) tokens
     |> String.concat " "
 
-(* deprecated - TODO: remove
-  let main () =
-    let (channel, fname) =
-      if Array.length Sys.argv > 1 then
-        ((open_in Sys.argv.(1)), Sys.argv.(1))
-      else 
-        (stdin, "stdin")
-    in
-    let lexbuf = set_fname fname (L.from_channel channel) in
-    let token_list = List.rev (token [] lexbuf) in
-    let () = List.iter (fun tok -> Printf.printf "%s " (to_string tok)) token_list in
-    let () = print_endline "" in
-    token_list
-
-  let _ = Printexc.print main ()
-*)
 }
