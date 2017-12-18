@@ -43,7 +43,7 @@ let string_of_op = function
   | Sub   -> Printf.sprintf "-"
   | Mult  -> Printf.sprintf "*"
   | Div   -> Printf.sprintf "/"
-  | Mod   -> Printf.sprintf "%%"
+  | Mod   -> Printf.sprintf "%"
   | Eq    -> Printf.sprintf "="
   | Lt    -> Printf.sprintf "<"
   | Leq   -> Printf.sprintf "<="
