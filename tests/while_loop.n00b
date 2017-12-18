@@ -1,0 +1,5 @@
+define function main with no params
+	set a to 3
+	while (a <= 7)
+		set a to a + 1
+	print(a)
