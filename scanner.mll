@@ -111,6 +111,7 @@ rule token stream = parse
   | ('/' | "divided by")      { let toks = DIVIDE :: stream in token toks lexbuf }
   | ('%' | "modulo")          { let toks = MOD    :: stream in token toks lexbuf }
   | ('=' | "equals")          { let toks = EQUALS :: stream in token toks lexbuf }
+  | ("!="| "not equals")      { let toks = NEQ    :: stream in token toks lexbuf }
   | ('>' | "greater than")    { let toks = GT     :: stream in token toks lexbuf }
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
   | (">=" | "greater than or equal to") 
@@ -122,7 +123,10 @@ rule token stream = parse
   | "/*"                      { multi_comment stream lexbuf } 
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
-  | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
+  | "'s" | '.'                { let toks = ATTR   :: stream in token toks lexbuf }
+  | "size"                    { let toks = SIZE   :: stream in token toks lexbuf }
+  | "append" | "push"         { let toks = PUSH   :: stream in token toks lexbuf }
+  | "pop"                     { let toks = POP    :: stream in token toks lexbuf }
   | id as ident               { let toks = ID(ident) :: stream in token toks lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
   | _ as char                 { raise (E.SyntaxError((Printf.sprintf "unrecognized char '%c'" char))) }
@@ -165,6 +169,7 @@ and multi_comment stream = parse
   | WITH            -> Printf.sprintf "WITH"
   | PARAMS          -> Printf.sprintf "PARAMS"
   | EQUALS          -> Printf.sprintf "EQUAL"
+  | NEQ             -> Printf.sprintf "NEQ"
   | GT              -> Printf.sprintf "GT"
   | LT              -> Printf.sprintf "LT"
   | GEQ             -> Printf.sprintf "GEQ"
@@ -194,6 +199,9 @@ and multi_comment stream = parse
   | COLON           -> Printf.sprintf "COLON"
   | LBRACK          -> Printf.sprintf "LBRACK"
   | RBRACK          -> Printf.sprintf "RBRACK"
+  | SIZE            -> Printf.sprintf "SIZE"
+  | PUSH            -> Printf.sprintf "PUSH"
+  | POP             -> Printf.sprintf "POP"
   | LPAREN          -> Printf.sprintf "LPAREN"
   | RPAREN          -> Printf.sprintf "RPAREN"
   | INDENT          -> Printf.sprintf "INDENT"

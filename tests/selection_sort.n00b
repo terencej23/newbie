@@ -1,0 +1,15 @@
+# selection sort
+define function main with no params
+	arr = [5, 4, 3, 2, 1]
+	len = 5
+
+	inner_i = 0
+	outer_i = 0
+	while ()
+		inner_i = outer_i + inner_i
+		min = outer_i
+		while ()
+			if (arr[outer_i] < arr[min])
+				min = outer_i
+
+		set arr[outer]

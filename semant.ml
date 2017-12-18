@@ -33,7 +33,31 @@ let rec expr_to_sexpr expr env =
   (* list functionality *)
   | List(e_l)                 -> (check_list e_l env)
   | ListAccess(s, e)          -> (check_access s e env)
+  | ListPop(s)                -> (check_pop s env) (* TODO *)
+  | ListPush(s, e)            -> (check_push s e env) (* TODO *)
+  | ListSize(s)               -> (check_size s env) (* TODO *)
   | ListSlice(s, e1, e2)      -> (check_slice s e1 e2 env) (* returns func call *)
+
+and check_pop id env =
+  let old_typ = get_type id env in
+  (SListPop(id, old_typ), env)
+
+and check_push id expr env =
+  let old_typ = get_type id env in
+
+  let (sexpr, _) = expr_to_sexpr expr env in
+  let typ_in = sexpr_to_type sexpr in
+
+  if (typ_in <> Datatype(Void) && old_typ <> typ_in) then
+    (raise E.InvalidListElementType)
+  else if (typ_in = Datatype(Void)) then
+    (SListPush(id, sexpr, old_typ), env) 
+  else
+    (SListPush(id, sexpr, typ_in), env)
+
+and check_size id env =
+  let _ = check_scope id env in
+  (SListSize(id), env)
 
 and sexpr_to_type = function
     SIntLit(_, typ)           -> typ
@@ -48,6 +72,9 @@ and sexpr_to_type = function
   (* list functionality *)
   | SList(_, typ)             -> typ
   | SListAccess(_, _, typ)    -> typ
+  | SListPop(_, typ)          -> typ
+  | SListPush(_, _, typ)      -> typ
+  | SListSize(_)              -> Datatype(Int)
 
 and expr_list_to_sexpr_list e_l env =
   let env_ref = ref(env) in
@@ -313,6 +340,18 @@ and check_scope var env =
       (raise (E.UndefinedId var))
   )
 
+(* check type of var - as well as access *)
+and get_type var env =
+  try
+    StringMap.find var env.env_flocals
+  with Not_found -> (
+    try
+      StringMap.find var env.env_globals
+    with Not_found -> 
+      (raise (E.UndefinedId var))
+  )
+  
+
 (* check variable assignment *)
 and check_assign var expr env =
   let sexpr, env = expr_to_sexpr expr env in
@@ -404,7 +443,7 @@ and check_binop e1 op e2 env =
   let typ1 = sexpr_to_type se1 in
   let typ2 = sexpr_to_type se2 in
   match op with
-    Eq ->
+    Eq | Neq ->
       if (typ1 = typ2 || typ1 = Datatype(Void) || typ2 = Datatype(Void)) then
         if (typ1 = Datatype(String)) then
           (SCall("strcmp", [se1 ; se2], Datatype(Bool)), env)
