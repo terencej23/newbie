@@ -1,0 +1,22 @@
+
+define function main with no params
+	set a to [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+	print("Searching for element 12...")
+	print(binary_search(a, 0, 9, 12))
+
+	print("Searching for element 3...")
+	print(binary_search(a, 0, 9, 3))
+
+
+
+define function binary_search with params(a, low, high, key)
+	if (high >= low)
+		set mid to (low + high) / 2
+
+		if (a[mid] = key)
+			return mid
+		if (a[mid] > key)
+			return binary_search(a, low, mid-1, key)
+		return binary_search(a, mid+1, high, key)
+
+	return -1

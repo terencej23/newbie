@@ -6,3 +6,4 @@ define function main with no params
 	set x to 1
 	set y to 1
 	set out to plus_10(x, y)
+	print(out)

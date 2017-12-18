@@ -1,0 +1,16 @@
+define function main with no params
+	set x to 2 + 3 * 4
+
+	print(x)
+
+	set x2 to (2 + 3) * 4
+
+	print(x2)
+
+	set y to 9 - 6 / 3
+
+	print(y)
+
+	set y2 to (9 - 6) / 3
+
+	print(y2)

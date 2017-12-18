@@ -1,4 +1,0 @@
-# check print for ints
-define function main with no params
-	print(345)
-	print(16)

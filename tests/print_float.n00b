@@ -1,3 +1,0 @@
-# check print for floats
-define function main with no params
-	print(345.00)

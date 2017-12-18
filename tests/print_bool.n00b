@@ -1,4 +1,0 @@
-# check print for boolean values
-define function main with no params
-	print(false)
-	print(true)
