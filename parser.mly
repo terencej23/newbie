@@ -5,10 +5,11 @@
 /* TODO: lists, iterations, breaks */
 
 %token LPAREN RPAREN LBRACK RBRACK COLON COMMA ATTR
+%token SIZE POP PUSH
 %token NEWLINE INDENT DEDENT
 %token RETURN DEF FUNC WITH NO PARAMS IF ELSE FOR WHILE EACH IN 
-%token BREAK
-%token PLUS MINUS NEG MULT DIVIDE MOD EQUALS ASSIGN TO
+%token BREAK 
+%token PLUS MINUS NEG MULT DIVIDE MOD EQUALS NEQ ASSIGN TO
 %token GT LT GEQ LEQ AND OR NOT TRUE FALSE
 %token EOF
 
@@ -21,7 +22,7 @@
 %nonassoc ELSE
 %left OR
 %left AND
-%left EQUALS
+%left EQUALS NEQ
 %left LT GT LEQ GEQ
 %left PLUS MINUS
 %left MULT DIVIDE MOD
@@ -71,7 +72,7 @@ param_list:
   | param_list COMMA ID   { $3 :: $1 } 
 
 iteration_stmt:
-  WHILE LPAREN expr RPAREN NEWLINE compound_stmt  { While($3, $6) }
+    WHILE LPAREN expr RPAREN NEWLINE compound_stmt  { While($3, $6) }
 
 stmt_list:
     /* nothing */   { [] }
@@ -137,6 +138,10 @@ list_expr:
     LBRACK expr_list_opt RBRACK       { List($2) }
   | ID LBRACK expr RBRACK             { ListAccess($1, $3) }
   | ID LBRACK expr COLON expr RBRACK  { ListSlice($1, $3, $5) }
+  /* TODO: make more psuedocode like */
+  | ID ATTR SIZE LPAREN RPAREN        { ListSize($1) }
+  | ID ATTR PUSH LPAREN expr RPAREN   { ListPush($1, $5) }
+  | ID ATTR POP LPAREN RPAREN         { ListPop($1) }
 
 expr_list_opt:
     /* nothing */     { [] }
