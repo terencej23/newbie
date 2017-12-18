@@ -1,0 +1,6 @@
+
+define function main with no params
+	set a to [1]
+	# set a to []
+	# set b to [0,2,3,4]
+	# set b[0] to 1

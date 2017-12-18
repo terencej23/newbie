@@ -41,15 +41,17 @@ let main () =
   in
   let gen_ast = Parser.program cache lexbuf in
   let gen_sast = Semant.check gen_ast in
-  let the_module = Codegen.translate gen_sast in
   match action with
     TOKEN           -> print_endline (Scanner.string_of_tokens tokens)
   | AST             -> print_endline (Ast.string_of_program gen_ast)
   | SAST            -> print_endline (Sast.string_of_sprogram gen_sast)
-  | LLVIM_IR        -> print_endline (Llvm.string_of_llmodule the_module)
-  | COMPILE         -> Llvm_analysis.assert_valid_module the_module ; 
+  | LLVIM_IR        -> let the_module = Codegen.translate gen_sast in 
+                       print_endline (Llvm.string_of_llmodule the_module)
+  | COMPILE         -> let the_module = Codegen.translate gen_sast in
+                       Llvm_analysis.assert_valid_module the_module ; 
                        print_string (Llvm.string_of_llmodule the_module)
-  | DEFAULT         -> Llvm_analysis.assert_valid_module the_module ; 
+  | DEFAULT         -> let the_module = Codegen.translate gen_sast in
+      Llvm_analysis.assert_valid_module the_module ; 
       let llvm_code = Llvm.string_of_llmodule the_module in
       let ll_fname =
         let basename = Filename.basename fname in

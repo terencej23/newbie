@@ -10,6 +10,9 @@ type sexpr =
   | SId of string * datatype
   | SCall of string * sexpr list * datatype
   | SNoexpr
+  (* list *) 
+  | SList of sexpr list * datatype
+  | SListAccess of string * sexpr * datatype
 
 type sstmt =
     SBlock of sstmt list
@@ -22,13 +25,16 @@ type sstmt =
   | SAssign of string * sexpr * datatype
   | SExpr of sexpr * datatype
   | SReturn of sexpr * datatype
+  (* list *) 
+  | SListReplace of string * sexpr * sexpr * datatype
+  | SBreak
 
 type sfdecl = {
   styp: datatype;
   sfname: string;
   slocals: (string * datatype) list;
   sformals: (string * datatype) list;
-  sbody: sstmt list;
+  sbody: sstmt list; 
 }
 
 type sglobal = string * sexpr * datatype
@@ -61,6 +67,7 @@ let rec string_of_typ = function
   | Datatype(Float)         -> Printf.sprintf "float"
   | Datatype(Bool)          -> Printf.sprintf "bool"
   | Datatype(Void)          -> Printf.sprintf "void"
+  | Listtype(typ)           -> Printf.sprintf "list(%s)" (string_of_typ @@ Datatype(typ))
 
 let rec string_of_sexpr = function
     SIntLit(d, _)             -> Printf.sprintf "%d" d
@@ -76,6 +83,11 @@ let rec string_of_sexpr = function
   | SCall(s, se, _)           -> Printf.sprintf "%s(%s)"
                                  s (String.concat ", " (List.map string_of_sexpr se))
   | SNoexpr                   -> Printf.sprintf "noexpr"
+  (* list *)
+  | SListAccess(s, se, typ)    -> Printf.sprintf "%s[%s] -> %s" 
+                                  s (string_of_sexpr se) (string_of_typ typ)
+  | SList(se_l, typ)           -> Printf.sprintf "<%s>[%s]"
+                                  (string_of_typ typ) (String.concat ", " (List.map string_of_sexpr se_l))
 
 let rec string_of_sstmt = function
     SBlock(ss)                  -> Printf.sprintf "%s" 
@@ -92,6 +104,9 @@ let rec string_of_sstmt = function
                                     (string_of_sexpr se) (string_of_sstmt ss)
   | SAssign(ss, se, _)          -> Printf.sprintf "set %s to %s"
                                    ss (string_of_sexpr se)
+  | SListReplace(s, se1, se2, _)   -> Printf.sprintf "set %s[%s] to %s" 
+                                    s (string_of_sexpr se1) (string_of_sexpr se2)
+  | SBreak                          -> "break;\n"
 
 let string_of_sassign (s, se, _) = Printf.sprintf "set %s to %s" s (string_of_sexpr se)
 
