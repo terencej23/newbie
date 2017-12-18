@@ -69,8 +69,8 @@ param_list:
     ID                    { [$1] }
   | param_list COMMA ID   { $3 :: $1 } 
 
-iteration_stmt:
-  WHILE LPAREN expr RPAREN NEWLINE compound_stmt  { While($3, $6) }
+iter_stmt:
+  WHILE LPAREN expr RPAREN NEWLINE compound_stmt { While($3, $6) }
 
 stmt_list:
     /* nothing */   { [] }
@@ -80,6 +80,7 @@ stmt:
     expr_stmt     { $1 }
   | select_stmt   { $1 }
   | assign_stmt   { $1 }
+  | iter_stmt     { $1 }
   | compound_stmt { $1 }
   | jump_stmt     { $1 }
 
