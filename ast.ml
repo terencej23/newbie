@@ -4,27 +4,23 @@ type unop = Neg | Not
 type datatype = Datatype of typ
 
 type expr =
-  | StrLit of string
-  | IntLit of int
-  | FloatLit of float 
-  | BoolLit of bool
-  | Binop of expr * binop * expr
-  | Unop of unop * expr
-  | Id of string 
-  | Call of string * expr list
-  | Noexpr
+    | StrLit of string
+    | IntLit of int
+    | FloatLit of float | BoolLit of bool
+    | Binop of expr * binop * expr
+    | Unop of unop * expr
+    | Id of string 
+    | Call of string * expr list
+    | Noexpr
 
 type stmt = 
-  | Block of stmt list
-  | If of expr * stmt * stmt
-(*  
-  | While of expr * stmt
-  | For of expr * expr * expr * stmt
-  | Iter of expr * expr * stmt
-*)  
-  | Expr of expr
-  | Return of expr 
-  | Assign of string * expr 
+    | Block of stmt list
+    | If of expr * stmt * stmt
+(*  | While of expr * stmt *)
+(*  | For of expr * expr * expr  *)
+    | Expr of expr
+    | Return of expr 
+    | Assign of string * expr 
 
 type fdecl =  {
   fname : string;
@@ -36,14 +32,14 @@ type global =  string * expr
 type program = global list * fdecl list
 
 
-(* pretty printing functions *)
+(* Pretty-printing functions *)
 
 let string_of_op = function
     Add   -> Printf.sprintf "+"
   | Sub   -> Printf.sprintf "-"
   | Mult  -> Printf.sprintf "*"
   | Div   -> Printf.sprintf "/"
-  | Mod   -> Printf.sprintf "%"
+  | Mod   -> Printf.sprintf "%%"
   | Eq    -> Printf.sprintf "="
   | Lt    -> Printf.sprintf "<"
   | Leq   -> Printf.sprintf "<="
@@ -82,10 +78,8 @@ let rec string_of_stmt = function
                                     (string_of_expr e) (string_of_stmt s)
   | If(e, s1, s2)               -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
                                     (string_of_expr e) (string_of_stmt s1) (string_of_stmt s2)
-(*
-  | While(e, s)                 -> Printf.sprintf "while (%s)\n\t%s" 
-                                    (string_of_expr e) (string_of_stmt s)
-*)
+(*  | While(e, s)                 -> Printf.sprintf "while (%s)\n\t%s" 
+                                    (string_of_expr e) (string_of_stmt s) *)
   | Assign(s, e)                -> Printf.sprintf "set %s to %s"
                                      s (string_of_expr e)
 
@@ -97,5 +91,5 @@ let string_of_fdecl fdecl = Printf.sprintf "define function %s with params (%s)\
   (String.concat "\n\t" (List.map string_of_stmt fdecl.body))
 
 let string_of_program (vars, funcs) = Printf.sprintf "%s\n\n%s"
-  (String.concat "\n" (List.map string_of_assign vars))
-  (String.concat "\n" (List.map string_of_fdecl funcs))
+(String.concat "\n" (List.map string_of_assign vars))
+(String.concat "\n" (List.map string_of_fdecl funcs))
