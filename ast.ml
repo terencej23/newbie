@@ -16,6 +16,9 @@ type expr =
   (* list *) 
   | List of expr list
   | ListAccess of string * expr
+  | ListPop of string
+  | ListPush of string * expr
+  | ListSize of string
   | ListSlice of string * expr * expr
 
 type stmt = 
@@ -76,11 +79,14 @@ let rec string_of_expr = function
                                 f (String.concat ", " (List.map string_of_expr e))
   | Noexpr                  -> Printf.sprintf "noexpr"
   (* list *)
-  | ListAccess(s, e)        -> Printf.sprintf "%s[%s]" s (string_of_expr e)
-  | ListSlice(s, e1, e2)    -> Printf.sprintf "%s[%s:%s]" 
-                                s (string_of_expr e1) (string_of_expr e2)
   | List(e_l)               -> Printf.sprintf "[%s]"
                                 (String.concat ", " (List.map string_of_expr e_l))
+  | ListAccess(s, e)        -> Printf.sprintf "%s[%s]" s (string_of_expr e)
+  | ListPop(s)              -> Printf.sprintf "%s.pop()" s
+  | ListPush(s, e)          -> Printf.sprintf "%s.append(%s)" s (string_of_expr e)
+  | ListSize(s)             -> Printf.sprintf "%s.size()" s
+  | ListSlice(s, e1, e2)    -> Printf.sprintf "%s[%s:%s]" 
+                                s (string_of_expr e1) (string_of_expr e2)
 
 let rec string_of_stmt = function
     Block(s)                    -> Printf.sprintf "%s" 

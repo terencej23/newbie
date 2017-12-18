@@ -13,6 +13,10 @@ type sexpr =
   (* list *) 
   | SList of sexpr list * datatype
   | SListAccess of string * sexpr * datatype
+  | SListPop of string * datatype
+  | SListPush of string * sexpr * datatype
+  | SListSize of string
+  | SListSlice of string * sexpr * sexpr 
 
 type sstmt =
     SBlock of sstmt list
@@ -84,10 +88,15 @@ let rec string_of_sexpr = function
                                  s (String.concat ", " (List.map string_of_sexpr se))
   | SNoexpr                   -> Printf.sprintf "noexpr"
   (* list *)
-  | SListAccess(s, se, typ)    -> Printf.sprintf "%s[%s] -> %s" 
-                                  s (string_of_sexpr se) (string_of_typ typ)
-  | SList(se_l, typ)           -> Printf.sprintf "<%s>[%s]"
+  | SList(se_l, typ)          -> Printf.sprintf "<%s>[%s]"
                                   (string_of_typ typ) (String.concat ", " (List.map string_of_sexpr se_l))
+  | SListAccess(s, se, typ)   -> Printf.sprintf "%s[%s] -> %s" 
+                                  s (string_of_sexpr se) (string_of_typ typ)
+  | SListPop(s, _)            -> Printf.sprintf "%s.pop()" s
+  | SListPush(s, se, _)       -> Printf.sprintf "%s.append(%s)" s (string_of_sexpr se)
+  | SListSize(s)              -> Printf.sprintf "%s.size()" s
+  | SListSlice(s, se1, se2)    -> Printf.sprintf "%s[%s:%s]" 
+                                  s (string_of_sexpr se1) (string_of_sexpr se2)
 
 let rec string_of_sstmt = function
     SBlock(ss)                  -> Printf.sprintf "%s" 
