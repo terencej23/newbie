@@ -1,4 +1,4 @@
-OBJS = exceptions.cmx ast.cmx sast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx newbie.cmx
+OBJS = exceptions.cmx ast.cmx sast.cmx semant.cmx codegen.cmx parser.cmx scanner.cmx newbie.cmx
 
 .PHONY: all
 all: newbie print.o
