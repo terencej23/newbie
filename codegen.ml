@@ -55,11 +55,11 @@ let translate (globals, functions) =
     (* Format strings for printing *) 
     let int_format_str builder = L.build_global_stringptr "%d\n" "fmt" builder 
     and str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder 
-    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder in  
+    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder in 
 
     (* get struct pointer *)
     let lookup_struct typ =
-      let s = string_of_typ typ in
+      let s = S.string_of_typ typ in
       StringMap.find s pointer_wrapper
     in
 
@@ -68,19 +68,13 @@ let translate (globals, functions) =
       | A.Datatype(A.Bool)    ->  i1_t
       | A.Datatype(A.Void)    ->  void_t
       | A.Datatype(A.String)  ->  str_t
-      | A.Datatype(A.Float)   -> float_t 
-      | A.Listtype(t)         -> L.pointer_type (lookup_struct (A.Datatype(t)))
+      | A.Datatype(A.Float)   ->  float_t 
+      | A.Listtype(t)         ->  L.pointer_type (lookup_struct (A.Datatype(t)))
     in
 
     (* Declare print *)
     let print_t = L.var_arg_function_type i32_t [| str_t |] in
     let print_func = L.declare_function "printf" print_t the_module in
-
-    (* Format strings for printing *) 
-    let str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder 
-    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder
-    and int_format_str builder = L.build_global_stringptr "%d\n" "fmt" builder in
-
 
     (* Define each function (arguments and return type) so we can call it *)
     let function_decls = 
@@ -103,32 +97,34 @@ let translate (globals, functions) =
         | None    -> ignore (f builder)
 
     and expr builder = function 
-        S.SBoolLit(b, _)  -> L.const_int i1_t (if b then 1 else 0)
-      | S.SStrLit (s, _)  -> L.build_global_stringptr s "string" builder
-      | S.SNoexpr    -> L.const_int i32_t 0
-      | S.SFloatLit(f, _) -> L.const_float float_t f 
-      | S.SIntLit (i, _)  -> L.const_int i32_t i
+        S.SBoolLit(b, _)    -> L.const_int i1_t (if b then 1 else 0)
+      | S.SStrLit (s, _)    -> L.build_global_stringptr s "string" builder
+      | S.SNoexpr           -> L.const_int i32_t 0
+      | S.SFloatLit(f, _)   -> L.const_float float_t f 
+      | S.SIntLit (i, _)    -> L.const_int i32_t i
       (* print built-in *)
-      | S.SCall("printstr", [e], _) -> 
-        L.build_call print_func [| str_format_str builder; (expr builder e)|]
-        "printf" builder
-      | S.SCall("printint", [e], _) -> 
-        L.build_call print_func [| int_format_str builder; (expr builder e)|]
-        "printf" builder
+      | S.SCall("printstr", [e], _)   -> 
+          L.build_call print_func [| str_format_str builder; (expr builder e)|]
+          "printf" builder
+      | S.SCall("printint", [e], _)   -> 
+          L.build_call print_func [| int_format_str builder; (expr builder e)|]
+          "printf" builder
       | S.SCall("printfloat", [e], _) -> 
-        L.build_call print_func [| float_format_str builder; (expr builder e)|]
-        "printf" builder
-      | S.SCall("printbool", [e], _) -> 
-        L.build_call print_func [| int_format_str builder; (expr builder e)|]
-        "printf" builder
+          L.build_call print_func [| float_format_str builder; (expr builder e)|]
+          "printf" builder
+      | S.SCall("printbool", [e], _)  -> 
+          L.build_call print_func [| int_format_str builder; (expr builder e)|]
+          "printf" builder
       (* function refs *)
       | S.SCall(f, act, _ ) ->
           let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
-          let result = (match fdecl.S.styp with 
-                                 A.Datatype(A.Void) -> ""
-                                 | _ -> f ^ "_result") in
-            L.build_call fdef (Array.of_list actuals) result builder
+          let result = 
+            match fdecl.S.styp with 
+              A.Datatype(A.Void)  -> ""
+            | _                   -> f ^ "_result"
+          in
+          L.build_call fdef (Array.of_list actuals) result builder
       | S.SUnop(op, e, _) -> 
           let e' = expr builder e in
           let llvm_build = function
@@ -173,17 +169,56 @@ let translate (globals, functions) =
               ) e1' e2' "tmp" builder
               | _ -> raise E.InvalidBinaryOperation) 
       (* list expr *)
-      | S.SList(se_l, t)    ->
+      | S.SListAccess(s, se, t) ->
+          let idx = expr builder se in
+          let idx = L.build_add idx (L.const_int i32_t 1) "access1" builder in
+          let struct_ptr = expr builder (S.SId(s, t)) in
+          let arr = 
+            L.build_load 
+              (L.build_struct_gep struct_ptr 0 "access2" builder)
+              "idl"
+              builder
+          in
+          let res = L.build_gep arr [| idx |] "access3" builder in
+          L.build_load res "access4" builder
+      | S.SList(se_l, t)        ->
           let it = 
-            match typ with
+            match t with
               A.Listtype(it)  -> it
             | _               -> (raise (E.InvalidListElementType))
           in
           let struct_ptr = L.build_malloc (lookup_struct t) "list1" builder in
-          let size = L.const_int i32_t ((List.length el) + 1) in
+          let size = L.const_int i32_t ((List.length se_l) + 1) in
           let typ = L.pointer_type (ltype_of_typ (A.Datatype(it))) in
           let arr = L.build_array_malloc typ size "list2" builder in
-          let arr = L.build_pointercast
+          let arr = L.build_pointercast arr typ "list3" builder in
+          let values = List.map (expr builder) se_l in
+          let buildf index value = 
+            let arr_ptr = 
+              L.build_gep arr [| (L.const_int i32_t (index+1)) |] "list4" builder
+            in
+            ignore(L.build_store value arr_ptr builder)
+          in
+          List.iteri buildf values ;
+          ignore(
+            L.build_store 
+              arr 
+              (L.build_struct_gep struct_ptr 0 "list5" builder) 
+              builder
+          ) ;
+          ignore(
+            L.build_store 
+              (L.const_int i32_t (List.length se_l)) 
+              (L.build_struct_gep struct_ptr 1 "list6" builder) 
+              builder
+          ) ;
+          ignore(
+            L.build_store 
+              (L.const_int i32_t 0)
+              (L.build_struct_gep struct_ptr 2 "list7" builder)
+              builder
+          ) ;
+          struct_ptr
 
     and stmt builder = 
       let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 
@@ -191,16 +226,42 @@ let translate (globals, functions) =
 
       | S.SBlock sl           -> List.fold_left stmt builder sl ; 
       | S.SExpr (e, _)        -> ignore (expr builder e) ; builder
-      | S.SReturn (e, _) -> ignore (match !current_f.S.styp with
-          A.Datatype(A.Void) -> L.build_ret_void builder
-          | _ -> L.build_ret (expr builder e) builder); builder
+      | S.SReturn (e, _) -> ignore (
+          match !current_f.S.styp with
+            A.Datatype(A.Void) -> L.build_ret_void builder
+          | _                  -> L.build_ret (expr builder e) builder
+        ); builder
       | S.SAssign (s, e, _)   ->
           let expr_t = Semant.sexpr_to_type e in (
-            match expr_t with
-            | _ ->  ignore (
-                      let e' = expr builder e in 
-                      L.build_store e' (lookup s) builder
-                    ) ; builder
+          match expr_t with
+            A.Listtype(A.Void)  -> 
+              if (StringMap.find s !list_lookup = A.Void) then
+                builder
+              else
+                let typ = StringMap.find s !list_lookup in
+                let struct_ptr = 
+                  L.build_malloc (lookup_struct (A.Datatype(typ))) "voidassign1" builder 
+                in
+                let typ = L.pointer_type (ltype_of_typ (A.Datatype(typ))) in
+                let arr = L.const_pointer_null typ in
+                ignore(
+                  L.build_store arr 
+                    (L.build_struct_gep struct_ptr 0 "voidassign2" builder) 
+                    builder
+                ) ;
+                let size = L.const_int i32_t 0 in
+                ignore(
+                  L.build_store size 
+                    (L.build_struct_gep struct_ptr 1 "voidassign3" builder) 
+                    builder
+                ) ;
+                ignore(L.build_store struct_ptr (lookup s) builder) ; 
+                builder
+
+          | _                   -> ignore (
+              let e' = expr builder e in 
+              L.build_store e' (lookup s) builder
+            ) ; builder
           )
       | S.SIf(condition, if_stmt, else_stmt) ->
           let bool_val = expr builder condition in
@@ -237,8 +298,11 @@ let translate (globals, functions) =
       | S.SBreak ->  ignore (L.build_br !br_block builder);  builder
 
      (* Lookup gives llvm for variable *)
-    and lookup n  = try StringMap.find n !local_vars
-        with Not_found ->   StringMap.find n !global_vars  
+    and lookup n  = 
+      try 
+        StringMap.find n !local_vars in
+      with Not_found ->   
+        StringMap.find n !global_vars  
     in
 
     (* Declare each global variable; remember its value in a map *)
@@ -267,11 +331,14 @@ let translate (globals, functions) =
                 in ignore (L.build_store p local builder); StringMap.add n local m 
             in
             let add_local m (n, t) =
-                (match t with 
-                | _ ->
-                        (let local_var = L.build_alloca (ltype_of_typ t) n builder
-                        in StringMap.add n local_var m)
-                )
+              match t with 
+              | A.Listtype(it)  -> 
+                  ignore(list_lookup := StringMap.add n it !list_lookup) ;
+                  let local_var = L.build_alloca (ltype_of_typ t) n builder in
+                  StringMap.add n local_var m             
+              | _               ->
+                  let local_var = L.build_alloca (ltype_of_typ t) n builder in 
+                  StringMap.add n local_var m
             in
             let formals = List.fold_left2 add_formal StringMap.empty 
                 fdecl.S.sformals (Array.to_list (L.params the_function)) 

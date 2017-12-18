@@ -67,11 +67,7 @@ let rec string_of_typ = function
   | Datatype(Float)         -> Printf.sprintf "float"
   | Datatype(Bool)          -> Printf.sprintf "bool"
   | Datatype(Void)          -> Printf.sprintf "void"
-  | Listtype(String)        -> Printf.sprintf "list(str)"
-  | Listtype(Int)           -> Printf.sprintf "list(int)"
-  | Listtype(Float)         -> Printf.sprintf "list(int)"
-  | Listtype(Bool)          -> Printf.sprintf "list(bool)"
-  | Listtype(Void)          -> Printf.sprintf "list(void)"
+  | Listtype(typ)           -> Printf.sprintf "list(%s)" (string_of_typ @@ Datatype(typ))
 
 let rec string_of_sexpr = function
     SIntLit(d, _)             -> Printf.sprintf "%d" d
