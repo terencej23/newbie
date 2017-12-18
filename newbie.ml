@@ -2,6 +2,8 @@
 
 type actions = TOKEN  | AST | SAST | LLVIM_IR | COMPILE | DEFAULT
 
+let lli_exec = "/usr/local/opt/llvm/bin/lli"
+
 let main () =
   let is_tag str =
     String.get str 0 = '-'
@@ -55,6 +57,6 @@ let main () =
       in
       let outFile = open_out (ll_fname) in
       Printf.fprintf outFile "%s\n" (llvm_code) ; close_out outFile ;           (* write out to file *)
-      ignore(Sys.command (Printf.sprintf "$LLI %s" ll_fname))                   (* run llvm interpreter - set var in makefile *)
+      ignore(Sys.command (Printf.sprintf "%s %s" lli_exec ll_fname))            (* run llvm interpreter - set var in makefile *)
 
 let _ = Printexc.print main ()
