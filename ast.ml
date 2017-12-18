@@ -1,4 +1,4 @@
-type binop = Add | Sub | Div | Mod | Mult | Or | And | Lt | Leq | Gt | Geq | Eq 
+type binop = Add | Sub | Div | Mod | Mult | Or | And | Lt | Leq | Gt | Geq | Eq | Neq
 type typ = Int | Void | String | Float | Bool 
 type unop = Neg | Not
 type datatype = Datatype of typ | Listtype of typ
@@ -53,6 +53,7 @@ let string_of_op = function
   | Div   -> Printf.sprintf "/"
   | Mod   -> Printf.sprintf "%%"
   | Eq    -> Printf.sprintf "="
+  | Neq   -> Printf.sprintf "!="
   | Lt    -> Printf.sprintf "<"
   | Leq   -> Printf.sprintf "<="
   | Gt    -> Printf.sprintf ">"
