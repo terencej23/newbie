@@ -122,7 +122,10 @@ rule token stream = parse
   | "/*"                      { multi_comment stream lexbuf } 
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
   | digit+ '.' digit* as num  { let toks = FLOATLIT(float_of_string num) :: stream in token toks lexbuf }
-  | "'s"                      { let toks = ATTR   :: stream in token toks lexbuf }
+  | "'s" | '.'                { let toks = ATTR   :: stream in token toks lexbuf }
+  | "size"                    { let toks = SIZE   :: stream in token toks lexbuf }
+  | "append" | "push"         { let toks = PUSH   :: stream in token toks lexbuf }
+  | "pop"                     { let toks = POP    :: stream in token toks lexbuf }
   | id as ident               { let toks = ID(ident) :: stream in token toks lexbuf }
   | eof                       { eof_dedent stream indent_stack } 
   | _ as char                 { raise (E.SyntaxError((Printf.sprintf "unrecognized char '%c'" char))) }
@@ -194,6 +197,9 @@ and multi_comment stream = parse
   | COLON           -> Printf.sprintf "COLON"
   | LBRACK          -> Printf.sprintf "LBRACK"
   | RBRACK          -> Printf.sprintf "RBRACK"
+  | SIZE            -> Printf.sprintf "SIZE"
+  | PUSH            -> Printf.sprintf "PUSH"
+  | POP             -> Printf.sprintf "POP"
   | LPAREN          -> Printf.sprintf "LPAREN"
   | RPAREN          -> Printf.sprintf "RPAREN"
   | INDENT          -> Printf.sprintf "INDENT"

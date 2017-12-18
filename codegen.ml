@@ -24,6 +24,8 @@ let translate (globals, functions) =
     let local_vars = ref (StringMap.empty) in 
     (* list lookup *)
     let list_lookup = ref (StringMap.empty) in
+    (* list lengths *)
+    let list_size = ref (StringMap.empty) in
 
     (* pointer wrapper - map of named struct types pointers *)
     let pointer_wrapper =
@@ -64,12 +66,13 @@ let translate (globals, functions) =
     in
 
     let ltype_of_typ = function
-        A.Datatype(A.Int)     ->  i32_t
-      | A.Datatype(A.Bool)    ->  i1_t
-      | A.Datatype(A.Void)    ->  void_t
-      | A.Datatype(A.String)  ->  str_t
-      | A.Datatype(A.Float)   ->  float_t 
-      | A.Listtype(t)         ->  L.pointer_type (lookup_struct (A.Datatype(t)))
+        A.Datatype(A.Int)     -> i32_t
+      | A.Datatype(A.Bool)    -> i1_t
+      | A.Datatype(A.Void)    -> void_t
+      | A.Datatype(A.String)  -> str_t
+      | A.Datatype(A.Float)   -> float_t 
+(*    | A.Listtype(t)         -> ltype_of_typ t *)
+      | A.Listtype(t)         -> L.pointer_type (lookup_struct (A.Datatype(t)))
     in
 
     (* Declare print *)
@@ -81,8 +84,9 @@ let translate (globals, functions) =
       let function_decl m fdecl = 
         let name = fdecl.S.sfname
         and formal_types = 
-        Array.of_list(List.map 
-          (fun (_, t) -> ltype_of_typ t) fdecl.S.sformals) 
+        Array.of_list(
+          List.map (fun (_, t) -> ltype_of_typ t) fdecl.S.sformals
+        ) 
         in
         let ftype = L.function_type (ltype_of_typ fdecl.S.styp) formal_types in
         StringMap.add name (L.define_function name ftype the_module, fdecl) m
@@ -169,18 +173,6 @@ let translate (globals, functions) =
               ) e1' e2' "tmp" builder
               | _ -> raise E.InvalidBinaryOperation) 
       (* list expr *)
-      | S.SListAccess(s, se, t) ->
-          let idx = expr builder se in
-          let idx = L.build_add idx (L.const_int i32_t 1) "access1" builder in
-          let struct_ptr = expr builder (S.SId(s, t)) in
-          let arr = 
-            L.build_load 
-              (L.build_struct_gep struct_ptr 0 "access2" builder)
-              "idl"
-              builder
-          in
-          let res = L.build_gep arr [| idx |] "access3" builder in
-          L.build_load res "access4" builder
       | S.SList(se_l, t)        ->
           let it = 
             match t with
@@ -219,6 +211,65 @@ let translate (globals, functions) =
               builder
           ) ;
           struct_ptr
+      | S.SListAccess(s, se, t) ->
+          let idx = expr builder se in
+          let idx = L.build_add idx (L.const_int i32_t 1) "access1" builder in
+          let struct_ptr = expr builder (S.SId(s, t)) in
+          let arr = 
+            L.build_load 
+              (L.build_struct_gep struct_ptr 0 "access2" builder)
+              "idl"
+              builder
+          in
+          let res = L.build_gep arr [| idx |] "access3" builder in
+          L.build_load res "access4" builder
+      | S.SListSize(s)        -> 
+          L.const_int i32_t (StringMap.find s !list_size)
+      | S.SListPush(s, se, t) ->
+          let old_size = 
+            L.const_int i32_t (StringMap.find s !list_size)
+          in
+          let load_values old_arr new_arr final_val arr_len start_pos builder =
+            let new_block label =
+              let f = L.block_parent (L.insertion_block builder) in
+              L.append_block context label f
+            in
+            let bbcurr = L.insertion_block builder in
+            let bbcond = new_block "array.cond" in
+            let bbbody = new_block "array.init" in
+            let bbdone = new_block "array.done" in
+            ignore (L.build_br bbcond builder) ;
+            L.position_at_end bbcond builder;
+
+            (* counter into the length of the array *)
+            let counter = L.build_phi [L.const_int i32_t start_pos, bbcurr] "counter" builder in
+            L.add_incoming ((L.build_add counter (L.const_int i32_t 1) "tmp" builder), bbbody) counter ;
+            let cmp = L.build_icmp L.Icmp.Slt counter arr_len "tmp1" builder in
+            ignore (L.build_cond_br cmp bbbody bbdone builder) ;
+            L.position_at_end bbbody builder ;
+
+            (* assign array position to init_val *)
+            let new_arr_ptr = L.build_gep new_arr [| counter |] "tmp2" builder in
+            let old_arr_ptr = L.build_gep old_arr [| counter |] "tmp3" builder in
+            let old_val = L.build_load old_arr_ptr "tmp4" builder in
+            ignore (L.build_store old_val new_arr_ptr builder) ;
+            ignore (L.build_br bbcond builder) ;
+
+            L.position_at_end bbdone builder ;
+            let new_arr_ptr = L.build_gep new_arr [| counter |] "tmp5" builder in
+            ignore (L.build_store final_val new_arr_ptr builder) ;
+
+          in
+          let e1' = expr builder (S.SId(s, t)) 
+          and e2' = expr builder se in
+          let new_size = L.build_add old_size (L.const_int i32_t 1) "new_size" builder in
+          let new_arr = L.build_array_alloca (L.type_of e2') new_size "tmp6" builder in
+          let _ = load_values e1' new_arr e2' old_size 0 builder in
+          let len = 
+            (StringMap.find s !list_size) + 1
+          in
+          list_size := (StringMap.add s len !list_size) ;
+          e2'
 
     and stmt builder = 
       let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 
@@ -232,9 +283,10 @@ let translate (globals, functions) =
           | _                  -> L.build_ret (expr builder e) builder
         ); builder
       | S.SAssign (s, e, _)   ->
+          (* TODO - len won't work with init list *)
           let expr_t = Semant.sexpr_to_type e in (
           match expr_t with
-            A.Listtype(A.Void)  -> 
+          | A.Listtype(Void)  -> 
               if (StringMap.find s !list_lookup = A.Void) then
                 builder
               else
@@ -250,6 +302,7 @@ let translate (globals, functions) =
                     builder
                 ) ;
                 let size = L.const_int i32_t 0 in
+                StringMap.add s 0 !list_size;
                 ignore(
                   L.build_store size 
                     (L.build_struct_gep struct_ptr 1 "voidassign3" builder) 
@@ -257,7 +310,6 @@ let translate (globals, functions) =
                 ) ;
                 ignore(L.build_store struct_ptr (lookup s) builder) ; 
                 builder
-
           | _                   -> ignore (
               let e' = expr builder e in 
               L.build_store e' (lookup s) builder
