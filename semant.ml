@@ -60,6 +60,7 @@ and stmt_to_sstmt stmt env =
   | Assign(s, e)        -> check_assign s e env
   | Return e            -> check_return e env
   | If(e, s1, s2)       -> check_if e s1 s2 env
+  | While(e, s)         -> check_while e s env
 
 and fdecl_to_sfdecl fname arg_type_list env =
   let fdecl = StringMap.find fname env.env_fmap in
@@ -207,6 +208,46 @@ and check_sblock sl env =
     in
     let (block, _) = (List.rev @@ (List.fold_left convert_stmt [] sl), !env_ref) in
     (SBlock(block), !env_ref)
+
+(* check and validate while loops *)
+and check_while expr stmt env =
+  (* create env for loop context *)
+  let prev_context = env.env_in_loop in
+  let env = {
+    env_globals = env.env_globals;
+    env_fmap = env.env_fmap;
+    env_fname = env.env_fname;
+    env_return_type = env.env_return_type;
+    env_flocals = env.env_flocals;
+    env_in_loop = true;
+    env_set_return = env.env_set_return; 
+    env_sfmap = env.env_sfmap;
+  }
+  in
+
+  (* semantically check condition & body *)
+  let (sexpr, env) = expr_to_sexpr expr env in
+  let typ = sexpr_to_type sexpr in
+  let (body, env) = stmt_to_sstmt stmt env in
+
+  (* revert env *)
+  let env = {
+    env_globals = env.env_globals;
+    env_fmap = env.env_fmap;
+    env_fname = env.env_fname;
+    env_return_type = env.env_return_type;
+    env_flocals = env.env_flocals;
+    env_in_loop = prev_context;
+    env_set_return = env.env_set_return; 
+    env_sfmap = env.env_sfmap; 
+  }
+  in
+
+  (* check condition *)
+  if (typ = Datatype(Bool)) then
+    (SWhile(sexpr, SBlock([body])), env)
+  else
+    (raise E.InvalidCondition)
 
 (* check and verify return type *)
 and check_return expr env =
