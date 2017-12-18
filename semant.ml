@@ -33,7 +33,31 @@ let rec expr_to_sexpr expr env =
   (* list functionality *)
   | List(e_l)                 -> (check_list e_l env)
   | ListAccess(s, e)          -> (check_access s e env)
+  | ListPop(s)                -> (check_pop s env) (* TODO *)
+  | ListPush(s, e)            -> (check_push s e env) (* TODO *)
+  | ListSize(s)               -> (check_size s env) (* TODO *)
   | ListSlice(s, e1, e2)      -> (check_slice s e1 e2 env) (* returns func call *)
+
+and check_pop id env =
+  let old_typ = get_type id env in
+  (SListPop(id, old_typ), env)
+
+and check_push id expr env =
+  let old_typ = get_type id env in
+
+  let (sexpr, _) = expr_to_sexpr expr env in
+  let typ_in = sexpr_to_type sexpr in
+
+  if (typ_in <> Datatype(Void) && old_typ <> typ_in) then
+    (raise E.InvalidListElementType)
+  else if (typ_in = Datatype(Void)) then
+    (SListPush(id, sexpr, old_typ), env) 
+  else
+    (SListPush(id, sexpr, typ_in), env)
+
+and check_size id env =
+  let _ = check_scope id env in
+  (SListSize(id), env)
 
 and sexpr_to_type = function
     SIntLit(_, typ)           -> typ
@@ -312,6 +336,18 @@ and check_scope var env =
     with Not_found -> 
       (raise (E.UndefinedId var))
   )
+
+(* check type of var - as well as access *)
+and get_type var env =
+  try
+    StringMap.find var env.env_flocals
+  with Not_found -> (
+    try
+      StringMap.find var env.env_globals
+    with Not_found -> 
+      (raise (E.UndefinedId var))
+  )
+  
 
 (* check variable assignment *)
 and check_assign var expr env =
