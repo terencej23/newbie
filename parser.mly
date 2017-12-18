@@ -69,6 +69,9 @@ param_list:
     ID                    { [$1] }
   | param_list COMMA ID   { $3 :: $1 } 
 
+iteration_stmt:
+  WHILE LPAREN expr RPAREN NEWLINE compound_stmt  { While($3, $6) }
+
 stmt_list:
     /* nothing */   { [] }
   | stmt_list stmt  { $2 :: $1 }

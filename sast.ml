@@ -14,8 +14,8 @@ type sexpr =
 type sstmt =
     SBlock of sstmt list
   | SIf of sexpr * sstmt * sstmt
-(*
   | SWhile of sexpr * sstmt
+(*
   | SFor of sexpr * sexpr * sexpr * stmt
   | SIter of sexpr * sstmt
 *)
@@ -88,10 +88,8 @@ let rec string_of_sstmt = function
                                    (string_of_sexpr se) (string_of_sstmt ss)
   | SIf(se, ss1, ss2)           -> Printf.sprintf "if (%s)\n\t%s\nelse\n\t%s"
                                    (string_of_sexpr se) (string_of_sstmt ss1) (string_of_sstmt ss2)
-(*
   | SWhile(se, ss)                -> Printf.sprintf "while (%s)\n\t%s"
                                     (string_of_sexpr se) (string_of_sstmt ss)
-*)
   | SAssign(ss, se, _)          -> Printf.sprintf "set %s to %s"
                                    ss (string_of_sexpr se)
 
