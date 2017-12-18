@@ -1,6 +1,7 @@
 module L = Llvm
 module A = Ast
 module S = Sast
+module Semant = Semant
 
 module StringMap = Map.Make(String)
 
@@ -88,6 +89,12 @@ let translate (globals, functions) =
             List.fold_left stmt builder sl; 
         | S.SExpr (e, _) -> ignore (expr builder e); builder
         | S.SReturn (e, _) -> L.build_ret_void builder; builder
+        | S.SAssign (s, e, _) ->
+                let expr_t = Semant.sexpr_to_type e in
+                (match expr_t with
+                | _ -> 
+                        (ignore(let e' = expr builder e in 
+                        (L.build_store e' (lookup s) builder)); builder))
 
      (* Lookup gives llvm for variable *)
     and lookup n  = try StringMap.find n !local_vars
