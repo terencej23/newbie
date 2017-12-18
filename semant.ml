@@ -72,6 +72,9 @@ and sexpr_to_type = function
   (* list functionality *)
   | SList(_, typ)             -> typ
   | SListAccess(_, _, typ)    -> typ
+  | SListPop(_, typ)          -> typ
+  | SListPush(_, _, typ)      -> typ
+  | SListSize(_)              -> Datatype(Int)
 
 and expr_list_to_sexpr_list e_l env =
   let env_ref = ref(env) in
@@ -440,7 +443,7 @@ and check_binop e1 op e2 env =
   let typ1 = sexpr_to_type se1 in
   let typ2 = sexpr_to_type se2 in
   match op with
-    Eq ->
+    Eq | Neq ->
       if (typ1 = typ2 || typ1 = Datatype(Void) || typ2 = Datatype(Void)) then
         if (typ1 = Datatype(String)) then
           (SCall("strcmp", [se1 ; se2], Datatype(Bool)), env)

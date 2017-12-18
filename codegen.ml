@@ -227,7 +227,10 @@ let translate (globals, functions) =
           L.const_int i32_t (StringMap.find s !list_size)
       | S.SListPush(s, se, t) ->
           let old_size = 
-            L.const_int i32_t (StringMap.find s !list_size)
+            try 
+              L.const_int i32_t (StringMap.find s !list_size)
+            with Not_found ->
+              L.const_int i32_t 0
           in
           let load_values old_arr new_arr final_val arr_len start_pos builder =
             let new_block label =
@@ -282,6 +285,14 @@ let translate (globals, functions) =
             A.Datatype(A.Void) -> L.build_ret_void builder
           | _                  -> L.build_ret (expr builder e) builder
         ); builder
+      | S.SListReplace(s, e1, e2, t) ->
+          let e2' = expr builder e2 in 
+          let idx = expr builder e1 in 
+          let idx = L.build_add idx (L.const_int i32_t 1) "listassign1" builder in 
+          let struct_ptr = expr builder (S.SId(s, t)) in 
+          let arr = L.build_load(L.build_struct_gep struct_ptr 0 "listassign2" builder) "arr" builder  in
+          let res = L.build_gep arr [| idx |] "listassign3" builder in
+          ignore(L.build_store e2' res builder); builder
       | S.SAssign (s, e, _)   ->
           (* TODO - len won't work with init list *)
           let expr_t = Semant.sexpr_to_type e in (
@@ -302,7 +313,7 @@ let translate (globals, functions) =
                     builder
                 ) ;
                 let size = L.const_int i32_t 0 in
-                StringMap.add s 0 !list_size;
+                ignore (StringMap.add s 0 !list_size);
                 ignore(
                   L.build_store size 
                     (L.build_struct_gep struct_ptr 1 "voidassign3" builder) 

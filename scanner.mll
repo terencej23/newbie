@@ -111,6 +111,7 @@ rule token stream = parse
   | ('/' | "divided by")      { let toks = DIVIDE :: stream in token toks lexbuf }
   | ('%' | "modulo")          { let toks = MOD    :: stream in token toks lexbuf }
   | ('=' | "equals")          { let toks = EQUALS :: stream in token toks lexbuf }
+  | ("!="| "not equals")      { let toks = NEQ    :: stream in token toks lexbuf }
   | ('>' | "greater than")    { let toks = GT     :: stream in token toks lexbuf }
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
   | (">=" | "greater than or equal to") 
@@ -168,6 +169,7 @@ and multi_comment stream = parse
   | WITH            -> Printf.sprintf "WITH"
   | PARAMS          -> Printf.sprintf "PARAMS"
   | EQUALS          -> Printf.sprintf "EQUAL"
+  | NEQ             -> Printf.sprintf "NEQ"
   | GT              -> Printf.sprintf "GT"
   | LT              -> Printf.sprintf "LT"
   | GEQ             -> Printf.sprintf "GEQ"

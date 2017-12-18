@@ -1,6 +1,9 @@
 
 define function main with no params
-	print(1)
+	set a to [1]
+	print(a[0])
+	set a[0] to 2
+	print(a[0])
 	# set a to [1,2,3,4,5]
 	# print(a[1])
 	# set a to []

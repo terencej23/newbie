@@ -54,6 +54,7 @@ let string_of_sop = function
   | Div   -> Printf.sprintf "/"
   | Mod   -> Printf.sprintf "%%"
   | Eq    -> Printf.sprintf "="
+  | Neq   -> Printf.sprintf "!="
   | Lt    -> Printf.sprintf "<"
   | Leq   -> Printf.sprintf "<="
   | Gt    -> Printf.sprintf ">"
