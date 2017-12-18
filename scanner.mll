@@ -98,6 +98,9 @@ rule token stream = parse
   | "with"                    { let toks = WITH   :: stream in token toks lexbuf }
   | "params"                  { let toks = PARAMS :: stream in token toks lexbuf }
   | "to"                      { let toks = TO     :: stream in token toks lexbuf }
+  | '['                       { let toks = LBRACK :: stream in token toks lexbuf }
+  | ']'                       { let toks = RBRACK :: stream in token toks lexbuf }
+  | ':'                       { let toks = COLON  :: stream in token toks lexbuf }
   | ','                       { let toks = COMMA  :: stream in token toks lexbuf }
   | '('                       { let toks = LPAREN :: stream in token toks lexbuf }
   | ')'                       { let toks = RPAREN :: stream in token toks lexbuf }
@@ -109,10 +112,11 @@ rule token stream = parse
   | ('=' | "equals")          { let toks = EQUALS :: stream in token toks lexbuf }
   | ('>' | "greater than")    { let toks = GT     :: stream in token toks lexbuf }
   | ('<' | "less than")       { let toks = LT     :: stream in token toks lexbuf }
-  | (">=" | "greater than or equal to") { let toks = GEQ    :: stream in token toks lexbuf }
-  | ("<=" | "less than or equal to")    { let toks = LEQ    :: stream in token toks lexbuf }
+  | (">=" | "greater than or equal to") 
+                              { let toks = GEQ    :: stream in token toks lexbuf }
+  | ("<=" | "less than or equal to") 
+                              { let toks = LEQ    :: stream in token toks lexbuf }
   | '"'                       { let toks = STRLIT(str (B.create buf_size) lexbuf) :: stream in token toks lexbuf }
-(* TODO: special handling of list *)
   | '#'                       { comment stream lexbuf }
   | "/*"                      { multi_comment stream lexbuf } 
   | digit+ as num             { let toks = INTLIT(int_of_string num) :: stream in token toks lexbuf }
@@ -186,6 +190,9 @@ and multi_comment stream = parse
   | FUNC            -> Printf.sprintf "FUNC"
   | RETURN          -> Printf.sprintf "RETURN"
   | COMMA           -> Printf.sprintf "COMMA"
+  | COLON           -> Printf.sprintf "COLON"
+  | LBRACK          -> Printf.sprintf "LBRACK"
+  | RBRACK          -> Printf.sprintf "RBRACK"
   | LPAREN          -> Printf.sprintf "LPAREN"
   | RPAREN          -> Printf.sprintf "RPAREN"
   | INDENT          -> Printf.sprintf "INDENT"

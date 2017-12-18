@@ -4,7 +4,7 @@
 
 /* TODO: lists, iterations, breaks */
 
-%token LPAREN RPAREN COMMA ATTR
+%token LPAREN RPAREN LBRACK RBRACK COLON COMMA ATTR
 %token NEWLINE INDENT DEDENT
 %token RETURN DEF FUNC WITH NO PARAMS IF ELSE FOR WHILE EACH IN 
 %token PLUS MINUS NEG MULT DIVIDE MOD EQUALS ASSIGN TO
@@ -94,7 +94,8 @@ select_stmt:
       { If($3, $6, $9) }
 
 assign_stmt:
-    ASSIGN ID TO expr NEWLINE       { Assign($2, $4) } 
+    ASSIGN ID TO expr NEWLINE                     { Assign($2, $4) } 
+  | ASSIGN ID LBRACK expr RBRACK TO expr NEWLINE  { ListReplace($2, $4, $7) }
 
 compound_stmt:
     INDENT stmt_list DEDENT         { Block(List.rev $2)}
@@ -120,6 +121,7 @@ expr:
   | NOT expr                      { Unop(Not, $2) }
   | ID LPAREN actuals_opt RPAREN  { Call($1, $3) }
   | LPAREN expr RPAREN            { $2 }
+  | list_expr                     { $1 }
 
 literals:
     INTLIT      { IntLit($1) }
@@ -128,6 +130,19 @@ literals:
   | TRUE        { BoolLit(true) }
   | FALSE       { BoolLit(false) }
   | ID          { Id($1) }
+
+list_expr:
+    LBRACK expr_list_opt RBRACK       { List($2) }
+  | ID LBRACK expr RBRACK             { ListAccess($1, $3) }
+  | ID LBRACK expr COLON expr RBRACK  { ListSlice($1, $3, $5) }
+
+expr_list_opt:
+    /* nothing */     { [] }
+  | expr_list         { List.rev $1 }
+
+expr_list:
+    expr                    { [$1] }
+  | expr_list COMMA expr    { $3 :: $1 }
 
 vinit:
     ASSIGN ID TO expr NEWLINE   { ($2, $4) }
