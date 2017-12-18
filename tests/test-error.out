@@ -1,0 +1,2 @@
+Uncaught exception: Exceptions.SyntaxError("unrecognized char '&'")
+Fatal error: exception Exceptions.SyntaxError("unrecognized char '&'")
