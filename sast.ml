@@ -22,13 +22,14 @@ type sstmt =
   | SAssign of string * sexpr * datatype
   | SExpr of sexpr * datatype
   | SReturn of sexpr * datatype
+  | SBreak
 
 type sfdecl = {
   styp: datatype;
   sfname: string;
   slocals: (string * datatype) list;
   sformals: (string * datatype) list;
-  sbody: sstmt list;
+  sbody: sstmt list; 
 }
 
 type sglobal = string * sexpr * datatype
@@ -92,6 +93,7 @@ let rec string_of_sstmt = function
                                     (string_of_sexpr se) (string_of_sstmt ss)
   | SAssign(ss, se, _)          -> Printf.sprintf "set %s to %s"
                                    ss (string_of_sexpr se)
+  | SBreak                          -> "break;\n"
 
 let string_of_sassign (s, se, _) = Printf.sprintf "set %s to %s" s (string_of_sexpr se)
 

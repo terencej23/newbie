@@ -80,6 +80,7 @@ rule token stream = parse
                               }  
   | ws+                       { token stream lexbuf }
   | "if"                      { let toks = IF     :: stream in token toks lexbuf }
+  | "break"                   { let toks = BREAK  :: stream in token toks lexbuf }
   | "else"                    { let toks = ELSE   :: stream in token toks lexbuf }
   | "true"                    { let toks = TRUE   :: stream in token toks lexbuf }
   | "false"                   { let toks = FALSE  :: stream in token toks lexbuf }
@@ -192,6 +193,7 @@ and multi_comment stream = parse
   | DEDENT          -> Printf.sprintf "DEDENT"
   | NEWLINE         -> Printf.sprintf "NEWLINE"
   | EOF             -> Printf.sprintf "EOF"
+  | BREAK           -> Printf.sprintf "BREAK"
 
 let string_of_tokens tokens = 
   List.map (fun tok -> string_of_token tok) tokens

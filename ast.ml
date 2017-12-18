@@ -21,6 +21,7 @@ type stmt =
     | Expr of expr
     | Return of expr 
     | Assign of string * expr 
+    | Break
 
 type fdecl =  {
   fname : string;
@@ -82,6 +83,7 @@ let rec string_of_stmt = function
                                     (string_of_expr e) (string_of_stmt s)
   | Assign(s, e)                -> Printf.sprintf "set %s to %s"
                                      s (string_of_expr e)
+  | Break                       -> Printf.sprintf "break\n;"
 
 let string_of_assign (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
 

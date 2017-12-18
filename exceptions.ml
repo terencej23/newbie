@@ -14,3 +14,5 @@ exception NothingAfterReturn
 exception SyntaxError of string
 exception UndefinedId of string
 exception WrongNumberOfArguments
+exception BreakOutsideOfLoop
+

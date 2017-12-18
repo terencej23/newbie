@@ -17,6 +17,8 @@ let translate (globals, functions) =
       and str_t  = L.pointer_type   (L.i8_type context) 
     in
 
+    let br_block    = ref (L.block_of_value (L.const_int i32_t 0)) in 
+
     let global_vars = ref (StringMap.empty) in
     let current_f = ref (List.hd functions) in
     let local_vars = ref (StringMap.empty) in 
@@ -25,7 +27,7 @@ let translate (globals, functions) =
         A.Datatype(A.Int)   ->  i32_t
       | A.Datatype(A.Bool)  ->  i1_t
       | A.Datatype(A.Void)  ->  void_t
-      | A.Datatype(A.String)  ->  str_t
+      | A.Datatype(A.String)->  str_t
       | A.Datatype(A.Float) -> float_t 
     in
 
@@ -156,6 +158,25 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val then_bb else_bb builder);
           L.builder_at_end context merge_bb
+      | S.SWhile (predicate, body) ->
+          let pred_bb = L.append_block context "while" the_function in
+          let body_bb = L.append_block context "while_body" the_function in
+
+          let pred_builder = L.builder_at_end context pred_bb in
+          let bool_val = expr pred_builder predicate in
+
+          let merge_bb = L.append_block context "merge" the_function in
+
+            br_block  := merge_bb; 
+
+            ignore(L.build_br pred_bb builder);
+
+            add_terminal (stmt (L.builder_at_end context body_bb) body) 
+                (L.build_br pred_bb);
+
+          ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
+          L.builder_at_end context merge_bb
+      | S.SBreak ->  ignore (L.build_br !br_block builder);  builder
 
      (* Lookup gives llvm for variable *)
     and lookup n  = try StringMap.find n !local_vars
