@@ -24,6 +24,7 @@ type stmt =
   | While of expr * stmt
 (*  | For of expr * expr * expr  *)
 (*  | Iter of expr * expr *)
+  | Break
   | Expr of expr
   | Return of expr 
   | Assign of string * expr 
@@ -98,6 +99,8 @@ let rec string_of_stmt = function
                                     s (string_of_expr e)
   | ListReplace(s, e1, e2)      -> Printf.sprintf "set %s[%s] to %s" 
                                     s (string_of_expr e1) (string_of_expr e2)
+                                     s (string_of_expr e)
+  | Break                       -> Printf.sprintf "break\n;"
 
 let string_of_assign (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
 

@@ -7,6 +7,7 @@
 %token LPAREN RPAREN LBRACK RBRACK COLON COMMA ATTR
 %token NEWLINE INDENT DEDENT
 %token RETURN DEF FUNC WITH NO PARAMS IF ELSE FOR WHILE EACH IN 
+%token BREAK
 %token PLUS MINUS NEG MULT DIVIDE MOD EQUALS ASSIGN TO
 %token GT LT GEQ LEQ AND OR NOT TRUE FALSE
 %token EOF
@@ -69,8 +70,8 @@ param_list:
     ID                    { [$1] }
   | param_list COMMA ID   { $3 :: $1 } 
 
-iter_stmt:
-  WHILE LPAREN expr RPAREN NEWLINE compound_stmt { While($3, $6) }
+iteration_stmt:
+  WHILE LPAREN expr RPAREN NEWLINE compound_stmt  { While($3, $6) }
 
 stmt_list:
     /* nothing */   { [] }
@@ -80,9 +81,9 @@ stmt:
     expr_stmt     { $1 }
   | select_stmt   { $1 }
   | assign_stmt   { $1 }
-  | iter_stmt     { $1 }
   | compound_stmt { $1 }
   | jump_stmt     { $1 }
+  | iteration_stmt{ $1 }
 
 expr_stmt:
     expr NEWLINE  { Expr $1 }
@@ -101,7 +102,8 @@ compound_stmt:
     INDENT stmt_list DEDENT         { Block(List.rev $2)}
 
 jump_stmt:
-    RETURN expr NEWLINE     { Return($2) }
+  | BREAK NEWLINE { Break }
+  | RETURN expr NEWLINE     { Return($2) }
 
 expr:
     literals                      { $1 }

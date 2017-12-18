@@ -1,0 +1,8 @@
+
+define function main with no params
+	print(foo(10))
+
+define function foo with params(a)
+	if(a = 0)
+		return true
+	return foo(a - 1)

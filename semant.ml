@@ -68,6 +68,7 @@ and stmt_to_sstmt stmt env =
   | Return e                -> check_return e env
   | If(e, s1, s2)           -> check_if e s1 s2 env
   | While(e, s)             -> check_while e s env
+  | Break               -> check_break env
   (* list functionality *)
   | ListReplace(s, e1, e2)  -> check_replace s e1 e2 env
 
@@ -195,6 +196,11 @@ and check_if expr s1 s2 env =
     (SIf(sexpr, SBlock([if_body]), SBlock([else_body])), env)
   else
     (raise (E.InvalidIfStatementType))
+
+and check_break env = 
+  if env.env_in_loop then
+    (SBreak, env)
+  else raise E.BreakOutsideOfLoop
 
 (* check block for validity *)
 and check_sblock sl env =

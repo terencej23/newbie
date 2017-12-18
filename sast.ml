@@ -27,13 +27,14 @@ type sstmt =
   | SReturn of sexpr * datatype
   (* list *) 
   | SListReplace of string * sexpr * sexpr * datatype
+  | SBreak
 
 type sfdecl = {
   styp: datatype;
   sfname: string;
   slocals: (string * datatype) list;
   sformals: (string * datatype) list;
-  sbody: sstmt list;
+  sbody: sstmt list; 
 }
 
 type sglobal = string * sexpr * datatype
@@ -109,6 +110,7 @@ let rec string_of_sstmt = function
                                    ss (string_of_sexpr se)
   | SListReplace(s, se1, se2, _)   -> Printf.sprintf "set %s[%s] to %s" 
                                     s (string_of_sexpr se1) (string_of_sexpr se2)
+  | SBreak                          -> "break;\n"
 
 let string_of_sassign (s, se, _) = Printf.sprintf "set %s to %s" s (string_of_sexpr se)
 

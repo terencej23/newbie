@@ -20,3 +20,5 @@ exception SyntaxError of string
 exception TypeMismatch of string
 exception UndefinedId of string
 exception WrongNumberOfArguments
+exception BreakOutsideOfLoop
+
