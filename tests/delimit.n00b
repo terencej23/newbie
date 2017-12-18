@@ -1,5 +1,0 @@
-goodbye = 0
-define hello_world with no params
-	if (true)
-		goodbye = 1
-	print("hello_world")
