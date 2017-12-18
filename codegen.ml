@@ -110,7 +110,6 @@ let translate (globals, functions) =
               | A.And     -> L.build_and
               | A.Or      -> L.build_or
               (* | A.Neq     -> L.build_icmp L.Icmp.Ne *)
-              | _         -> raise E.InvalidBinaryOperation 
               ) e1' e2' "tmp" builder
               | A.Datatype(A.Float) -> (match op with
               A.Add     ->   L.build_fadd
