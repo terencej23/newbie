@@ -1,0 +1,12 @@
+# test not and neg
+
+define function main with no params
+	set y to true
+	set x to not y
+	print(x)
+	print(y)
+
+	set num to 1
+	set neg_num to -1
+	print(num)
+	print(neg_num)

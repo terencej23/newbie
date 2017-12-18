@@ -1,1 +1,0 @@
-ASSIGN ID(integer) TO INT(1) PLUS INT(1) ASSIGN ID(float) TO FLOATLIT(1.000000) PLUS FLOATLIT(1.500000) ASSIGN ID(str_easy) TO STRLIT(this is a string) ASSIGN ID(str_hard) TO STRLIT( \" this is a quote \" \n ) EOF

@@ -280,14 +280,14 @@ and check_assign var expr env =
   else
     let flocals = StringMap.add var new_typ env.env_flocals in
     let new_env = {
-        env_fmap = env.env_fmap;
-        env_fname = env.env_fname;
-        env_return_type = env.env_return_type;
-        env_flocals = flocals;
-        env_globals = env.env_globals;
-        env_in_loop = env.env_in_loop;
-        env_set_return = env.env_set_return;
-        env_sfmap = env.env_sfmap;
+      env_fmap = env.env_fmap;
+      env_fname = env.env_fname;
+      env_return_type = env.env_return_type;
+      env_flocals = flocals;
+      env_globals = env.env_globals;
+      env_in_loop = env.env_in_loop;
+      env_set_return = env.env_set_return;
+      env_sfmap = env.env_sfmap;
     }
     in
     (SAssign(var, sexpr, new_typ), new_env)
