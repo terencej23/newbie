@@ -91,24 +91,42 @@ let translate (globals, functions) =
           llvm_build op
       | S.SId (s, _)    -> L.build_load (lookup s) s builder
 
-    and stmt builder = function
-          S.SBlock sl -> 
-            List.fold_left stmt builder sl; 
-        | S.SExpr (e, _) -> ignore (expr builder e); builder
-        | S.SReturn (e, _) -> L.build_ret_void builder; builder
-        | S.SAssign (s, e, _) ->
-                let expr_t = Semant.sexpr_to_type e in
-                (match expr_t with
-                | _ -> 
-                        (ignore(let e' = expr builder e in 
-                        (L.build_store e' (lookup s) builder)); builder))
+    and stmt builder = 
+      let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 
+      in function
+
+      | S.SBlock sl           -> List.fold_left stmt builder sl ; 
+      | S.SExpr (e, _)        -> ignore (expr builder e) ; builder
+      | S.SReturn (e, _)      -> ignore (L.build_ret_void builder) ; builder
+      | S.SAssign (s, e, _)   ->
+          let expr_t = Semant.sexpr_to_type e in (
+            match expr_t with
+            | _ ->  ignore (
+                      let e' = expr builder e in 
+                      L.build_store e' (lookup s) builder
+                    ) ; builder
+          )
+      | S.SIf(condition, if_stmt, else_stmt) ->
+          let bool_val = expr builder condition in
+          let merge_bb = L.append_block context "merge" the_function in
+
+          let then_bb = L.append_block context "then" the_function in
+          add_terminal (stmt (L.builder_at_end context then_bb) if_stmt)
+          (L.build_br merge_bb);
+
+          let else_bb = L.append_block context "else" the_function in
+          add_terminal (stmt (L.builder_at_end context else_bb) else_stmt)
+          (L.build_br merge_bb);
+
+          ignore (L.build_cond_br bool_val then_bb else_bb builder);
+          L.builder_at_end context merge_bb
 
      (* Lookup gives llvm for variable *)
     and lookup n  = try StringMap.find n !local_vars
         with Not_found ->   StringMap.find n !global_vars  
     in
 
-  (* Declare each global variable; remember its value in a map *)
+    (* Declare each global variable; remember its value in a map *)
     let _global_vars =
         let (f, _) = StringMap.find "main" function_decls in
         let builder = L.builder_at_end context (L.entry_block f) in
