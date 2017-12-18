@@ -76,13 +76,20 @@ let translate (globals, functions) =
       | S.SCall("printbool", [e], _) -> 
         L.build_call print_func [| int_format_str builder; (expr builder e)|]
         "printf" builder
-      | S.SCall (f, act, _ ) ->
-            let (fdef, fdecl) = StringMap.find f function_decls in
+      | S.SCall(f, act, _ ) ->
+          let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
           let result = (match fdecl.S.styp with 
                                  A.Datatype(A.Void) -> ""
                                  | _ -> f ^ "_result") in
             L.build_call fdef (Array.of_list actuals) result builder
+      | S.SUnop(op, e, _) -> 
+          let e' = expr builder e in
+          let llvm_build = function
+            | A.Neg       -> L.build_neg e' "tmp" builder
+            | A.Not       -> L.build_not e' "tmp" builder
+          in
+          llvm_build op
       | S.SId (s, _)    -> L.build_load (lookup s) s builder
       | S.SBinop (e1, op, e2, _) ->
           let e1' = expr builder e1
@@ -137,7 +144,6 @@ let translate (globals, functions) =
     and lookup n  = try StringMap.find n !local_vars
         with Not_found ->   StringMap.find n !global_vars  
     in
-
 
   (* Declare each global variable; remember its value in a map *)
     let _global_vars =

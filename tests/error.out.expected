@@ -1,2 +1,0 @@
-Uncaught exception: Scanner.Error("tests/error.n00b:1:1 unrecognized char '&'")
-Fatal error: exception Scanner.Error("tests/error.n00b:1:1 unrecognized char '&'")

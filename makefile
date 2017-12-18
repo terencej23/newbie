@@ -39,6 +39,8 @@ codegen.cmx: semant.cmx sast.cmo ast.cmx
 exceptions.cmo:
 exceptions.cmx:
 
+node : node.c
+	cc -o strcmp -DBUILD_TEST node.c
 
 .PHONY: clean
 clean:
