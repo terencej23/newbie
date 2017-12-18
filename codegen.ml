@@ -1,6 +1,7 @@
 module L = Llvm
 module A = Ast
 module S = Sast
+module E = Exceptions
 module Semant = Semant
 
 module StringMap = Map.Make(String)
@@ -90,25 +91,78 @@ let translate (globals, functions) =
           in
           llvm_build op
       | S.SId (s, _)    -> L.build_load (lookup s) s builder
+      | S.SBinop (e1, op, e2, _) ->
+          let e1' = expr builder e1
+          and e2' = expr builder e2 in
+            let typ = Semant.sexpr_to_type e1 in 
+            (match typ with 
+                A.Datatype(A.Int) |  A.Datatype(A.Bool) ->  (match op with
+                A.Add     -> L.build_add
+              | A.Sub     -> L.build_sub
+              | A.Mult    -> L.build_mul
+              | A.Div     -> L.build_sdiv
+              | A.Mod     -> L.build_srem 
+              | A.Eq   -> L.build_icmp L.Icmp.Eq
+              | A.Lt    -> L.build_icmp L.Icmp.Slt
+              | A.Leq     -> L.build_icmp L.Icmp.Sle
+              | A.Gt -> L.build_icmp L.Icmp.Sgt
+              | A.Geq     -> L.build_icmp L.Icmp.Sge
+              | A.And     -> L.build_and
+              | A.Or      -> L.build_or
+              (* | A.Neq     -> L.build_icmp L.Icmp.Ne *)
+              ) e1' e2' "tmp" builder
+              | A.Datatype(A.Float) -> (match op with
+              A.Add     ->   L.build_fadd
+              | A.Sub     -> L.build_fsub
+              | A.Mult    -> L.build_fmul
+              | A.Div     -> L.build_fdiv
+              | A.Mod     -> L.build_frem
+              | A.Eq   -> L.build_fcmp L.Fcmp.Oeq
+              | A.Lt    -> L.build_fcmp L.Fcmp.Ult
+              (* | A.Neq     -> L.build_fcmp L.Fcmp.One *)
+              | A.Leq     -> L.build_fcmp L.Fcmp.Ole
+              | A.Gt -> L.build_fcmp L.Fcmp.Ogt
+              | A.Geq     -> L.build_fcmp L.Fcmp.Oge
+              | _ -> raise E.InvalidBinaryOperation 
+              ) e1' e2' "tmp" builder
+              | _ -> raise E.InvalidBinaryOperation) 
 
-    and stmt builder = function
-          S.SBlock sl -> 
-            List.fold_left stmt builder sl; 
-        | S.SExpr (e, _) -> ignore (expr builder e); builder
-        | S.SReturn (e, _) -> L.build_ret_void builder; builder
-        | S.SAssign (s, e, _) ->
-                let expr_t = Semant.sexpr_to_type e in
-                (match expr_t with
-                | _ -> 
-                        (ignore(let e' = expr builder e in 
-                        (L.build_store e' (lookup s) builder)); builder))
+    and stmt builder = 
+      let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 
+      in function
+
+      | S.SBlock sl           -> List.fold_left stmt builder sl ; 
+      | S.SExpr (e, _)        -> ignore (expr builder e) ; builder
+      | S.SReturn (e, _)      -> ignore (L.build_ret_void builder) ; builder
+      | S.SAssign (s, e, _)   ->
+          let expr_t = Semant.sexpr_to_type e in (
+            match expr_t with
+            | _ ->  ignore (
+                      let e' = expr builder e in 
+                      L.build_store e' (lookup s) builder
+                    ) ; builder
+          )
+      | S.SIf(condition, if_stmt, else_stmt) ->
+          let bool_val = expr builder condition in
+          let merge_bb = L.append_block context "merge" the_function in
+
+          let then_bb = L.append_block context "then" the_function in
+          add_terminal (stmt (L.builder_at_end context then_bb) if_stmt)
+          (L.build_br merge_bb);
+
+          let else_bb = L.append_block context "else" the_function in
+          add_terminal (stmt (L.builder_at_end context else_bb) else_stmt)
+          (L.build_br merge_bb);
+
+          ignore (L.build_cond_br bool_val then_bb else_bb builder);
+          L.builder_at_end context merge_bb
 
      (* Lookup gives llvm for variable *)
     and lookup n  = try StringMap.find n !local_vars
         with Not_found ->   StringMap.find n !global_vars  
     in
 
-  (* Declare each global variable; remember its value in a map *)
+    (* Declare each global variable; remember its value in a map *)
     let _global_vars =
         let (f, _) = StringMap.find "main" function_decls in
         let builder = L.builder_at_end context (L.entry_block f) in
