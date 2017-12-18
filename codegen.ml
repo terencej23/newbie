@@ -300,7 +300,7 @@ let translate (globals, functions) =
      (* Lookup gives llvm for variable *)
     and lookup n  = 
       try 
-        StringMap.find n !local_vars in
+        StringMap.find n !local_vars
       with Not_found ->   
         StringMap.find n !global_vars  
     in
