@@ -1,1 +1,0 @@
-DEF ID(function) ID(hello_world) WITH NO PARAMS INDENT PRINT STRLIT(hello world!) DEDENT ID(hello_world) LPAREN RPAREN EOF 
