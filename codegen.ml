@@ -17,16 +17,59 @@ let translate (globals, functions) =
       and str_t  = L.pointer_type   (L.i8_type context) 
     in
 
+    let br_block    = ref (L.block_of_value (L.const_int i32_t 0)) in 
+
     let global_vars = ref (StringMap.empty) in
     let current_f = ref (List.hd functions) in
     let local_vars = ref (StringMap.empty) in 
+    (* list lookup *)
+    let list_lookup = ref (StringMap.empty) in
+
+    (* pointer wrapper - map of named struct types pointers *)
+    let pointer_wrapper =
+      List.fold_left
+      (fun map name -> StringMap.add name (L.named_struct_type context name) map)
+      StringMap.empty ["string"; "int"; "float"; "void"; "bool"]
+    in
+
+    (* set struct body fields for each of the types *)
+    let () = 
+      let set_struct_body name l =
+        let t = StringMap.find name pointer_wrapper in
+        ignore(
+          L.struct_set_body t (Array.of_list(l)) true
+        )
+      in
+      let named_types = ["string"; "int"; "float"; "void"; "bool"] in
+      let llvm_types = [
+        [L.pointer_type str_t; i32_t; i32_t]    ;
+        [L.pointer_type i32_t; i32_t; i32_t]    ; 
+        [L.pointer_type float_t; i32_t; i32_t]  ;
+        [L.pointer_type void_t; i32_t; i32_t]   ;
+        [L.pointer_type i1_t; i32_t; i32_t]     ;
+      ] 
+      in
+      List.iter2 set_struct_body named_types llvm_types
+    in
+
+    (* Format strings for printing *) 
+    let int_format_str builder = L.build_global_stringptr "%d\n" "fmt" builder 
+    and str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder 
+    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder in  
+
+    (* get struct pointer *)
+    let lookup_struct typ =
+      let s = string_of_typ typ in
+      StringMap.find s pointer_wrapper
+    in
 
     let ltype_of_typ = function
-        A.Datatype(A.Int)   ->  i32_t
-      | A.Datatype(A.Bool)  ->  i1_t
-      | A.Datatype(A.Void)  ->  void_t
+        A.Datatype(A.Int)     ->  i32_t
+      | A.Datatype(A.Bool)    ->  i1_t
+      | A.Datatype(A.Void)    ->  void_t
       | A.Datatype(A.String)  ->  str_t
-      | A.Datatype(A.Float) -> float_t 
+      | A.Datatype(A.Float)   -> float_t 
+      | A.Listtype(t)         -> L.pointer_type (lookup_struct (A.Datatype(t)))
     in
 
     (* Declare print *)
@@ -44,9 +87,10 @@ let translate (globals, functions) =
       let function_decl m fdecl = 
         let name = fdecl.S.sfname
         and formal_types = 
-        Array.of_list(List.map (fun (_) -> void_t) fdecl.S.sformals) 
+        Array.of_list(List.map 
+          (fun (_, t) -> ltype_of_typ t) fdecl.S.sformals) 
         in
-        let ftype = L.function_type void_t formal_types in
+        let ftype = L.function_type (ltype_of_typ fdecl.S.styp) formal_types in
         StringMap.add name (L.define_function name ftype the_module, fdecl) m
       in
       List.fold_left function_decl StringMap.empty functions
@@ -64,6 +108,7 @@ let translate (globals, functions) =
       | S.SNoexpr    -> L.const_int i32_t 0
       | S.SFloatLit(f, _) -> L.const_float float_t f 
       | S.SIntLit (i, _)  -> L.const_int i32_t i
+      (* print built-in *)
       | S.SCall("printstr", [e], _) -> 
         L.build_call print_func [| str_format_str builder; (expr builder e)|]
         "printf" builder
@@ -76,6 +121,7 @@ let translate (globals, functions) =
       | S.SCall("printbool", [e], _) -> 
         L.build_call print_func [| int_format_str builder; (expr builder e)|]
         "printf" builder
+      (* function refs *)
       | S.SCall(f, act, _ ) ->
           let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
@@ -126,6 +172,18 @@ let translate (globals, functions) =
               | _ -> raise E.InvalidBinaryOperation 
               ) e1' e2' "tmp" builder
               | _ -> raise E.InvalidBinaryOperation) 
+      (* list expr *)
+      | S.SList(se_l, t)    ->
+          let it = 
+            match typ with
+              A.Listtype(it)  -> it
+            | _               -> (raise (E.InvalidListElementType))
+          in
+          let struct_ptr = L.build_malloc (lookup_struct t) "list1" builder in
+          let size = L.const_int i32_t ((List.length el) + 1) in
+          let typ = L.pointer_type (ltype_of_typ (A.Datatype(it))) in
+          let arr = L.build_array_malloc typ size "list2" builder in
+          let arr = L.build_pointercast
 
     and stmt builder = 
       let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 
@@ -133,7 +191,9 @@ let translate (globals, functions) =
 
       | S.SBlock sl           -> List.fold_left stmt builder sl ; 
       | S.SExpr (e, _)        -> ignore (expr builder e) ; builder
-      | S.SReturn (e, _)      -> ignore (L.build_ret_void builder) ; builder
+      | S.SReturn (e, _) -> ignore (match !current_f.S.styp with
+          A.Datatype(A.Void) -> L.build_ret_void builder
+          | _ -> L.build_ret (expr builder e) builder); builder
       | S.SAssign (s, e, _)   ->
           let expr_t = Semant.sexpr_to_type e in (
             match expr_t with
@@ -156,6 +216,25 @@ let translate (globals, functions) =
 
           ignore (L.build_cond_br bool_val then_bb else_bb builder);
           L.builder_at_end context merge_bb
+      | S.SWhile (predicate, body) ->
+          let pred_bb = L.append_block context "while" the_function in
+          let body_bb = L.append_block context "while_body" the_function in
+
+          let pred_builder = L.builder_at_end context pred_bb in
+          let bool_val = expr pred_builder predicate in
+
+          let merge_bb = L.append_block context "merge" the_function in
+
+            br_block  := merge_bb; 
+
+            ignore(L.build_br pred_bb builder);
+
+            add_terminal (stmt (L.builder_at_end context body_bb) body) 
+                (L.build_br pred_bb);
+
+          ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
+          L.builder_at_end context merge_bb
+      | S.SBreak ->  ignore (L.build_br !br_block builder);  builder
 
      (* Lookup gives llvm for variable *)
     and lookup n  = try StringMap.find n !local_vars

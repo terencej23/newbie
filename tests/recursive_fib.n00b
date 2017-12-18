@@ -1,0 +1,11 @@
+
+define function main with no params
+	print(fib(20))
+
+define function fib with params(n)
+	if(n = 0)
+		return 0
+	if(n = 1)
+		return 1
+	else
+		return fib(n - 1) + fib(n - 2)

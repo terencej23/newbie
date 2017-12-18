@@ -1,26 +1,35 @@
 type binop = Add | Sub | Div | Mod | Mult | Or | And | Lt | Leq | Gt | Geq | Eq 
 type typ = Int | Void | String | Float | Bool 
 type unop = Neg | Not
-type datatype = Datatype of typ
+type datatype = Datatype of typ | Listtype of typ
 
 type expr =
-    | StrLit of string
-    | IntLit of int
-    | FloatLit of float | BoolLit of bool
-    | Binop of expr * binop * expr
-    | Unop of unop * expr
-    | Id of string 
-    | Call of string * expr list
-    | Noexpr
+  | StrLit of string
+  | IntLit of int
+  | FloatLit of float 
+  | BoolLit of bool
+  | Binop of expr * binop * expr
+  | Unop of unop * expr
+  | Id of string 
+  | Call of string * expr list
+  | Noexpr
+  (* list *) 
+  | List of expr list
+  | ListAccess of string * expr
+  | ListSlice of string * expr * expr
 
 type stmt = 
-    | Block of stmt list
-    | If of expr * stmt * stmt
-    | While of expr * stmt
+  | Block of stmt list
+  | If of expr * stmt * stmt
+  | While of expr * stmt
 (*  | For of expr * expr * expr  *)
-    | Expr of expr
-    | Return of expr 
-    | Assign of string * expr 
+(*  | Iter of expr * expr *)
+  | Break
+  | Expr of expr
+  | Return of expr 
+  | Assign of string * expr 
+  (* list *) 
+  | ListReplace of string * expr * expr
 
 type fdecl =  {
   fname : string;
@@ -63,9 +72,15 @@ let rec string_of_expr = function
                                 (string_of_expr e1) (string_of_op o) (string_of_expr e2)
   | Unop(o, e)              -> Printf.sprintf "%s %s"
                                 (string_of_uop o) (string_of_expr e)
-  | Call(f, e)             -> Printf.sprintf "%s(%s)"
+  | Call(f, e)              -> Printf.sprintf "%s(%s)"
                                 f (String.concat ", " (List.map string_of_expr e))
   | Noexpr                  -> Printf.sprintf "noexpr"
+  (* list *)
+  | ListAccess(s, e)        -> Printf.sprintf "%s[%s]" s (string_of_expr e)
+  | ListSlice(s, e1, e2)    -> Printf.sprintf "%s[%s:%s]" 
+                                s (string_of_expr e1) (string_of_expr e2)
+  | List(e_l)               -> Printf.sprintf "[%s]"
+                                (String.concat ", " (List.map string_of_expr e_l))
 
 let rec string_of_stmt = function
     Block(s)                    -> Printf.sprintf "%s" 
@@ -81,7 +96,11 @@ let rec string_of_stmt = function
   | While(e, s)                 -> Printf.sprintf "while (%s)\n\t%s" 
                                     (string_of_expr e) (string_of_stmt s)
   | Assign(s, e)                -> Printf.sprintf "set %s to %s"
+                                    s (string_of_expr e)
+  | ListReplace(s, e1, e2)      -> Printf.sprintf "set %s[%s] to %s" 
+                                    s (string_of_expr e1) (string_of_expr e2)
                                      s (string_of_expr e)
+  | Break                       -> Printf.sprintf "break\n;"
 
 let string_of_assign (s, e) = Printf.sprintf "set %s to %s" s (string_of_expr e)
 
