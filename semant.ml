@@ -569,7 +569,7 @@ and check_access id expr env =
 (* list - check init *)
 and check_list e_l env =
   if (List.length e_l = 0) then
-    (SList([], Listtype(Void)), env)
+    (SList([], Listtype(Int)), env)
   else 
     let (first_sexpr, env) = expr_to_sexpr (List.hd e_l) env in
     let target_typ = sexpr_to_type first_sexpr in
