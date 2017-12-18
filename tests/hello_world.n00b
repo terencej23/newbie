@@ -1,3 +1,0 @@
-# for now we require a main function as entrypoint - parser cant recognize free statements
-define function main with no params
-	print("hello world!")
