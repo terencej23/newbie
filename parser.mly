@@ -84,8 +84,10 @@ expr_stmt:
     expr NEWLINE  { Expr $1 }
 
 select_stmt:
-    IF LPAREN expr RPAREN NEWLINE INDENT stmt %prec NOELSE DEDENT  { If($3, $7, Block([])) }
-  | IF LPAREN expr RPAREN NEWLINE INDENT stmt ELSE stmt DEDENT     { If($3, $7, $9) }
+    IF LPAREN expr RPAREN NEWLINE compound_stmt %prec NOELSE         
+      { If($3, $6, Block([])) }
+  | IF LPAREN expr RPAREN NEWLINE compound_stmt ELSE NEWLINE compound_stmt
+      { If($3, $6, $9) }
 
 assign_stmt:
     ASSIGN ID TO expr NEWLINE       { Assign($2, $4) } 

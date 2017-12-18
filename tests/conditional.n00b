@@ -1,0 +1,15 @@
+define function main with no params
+	set x to true
+	set y to true
+
+	if (x)
+		print("print me!")
+		set y to false
+		set x to false
+	else
+		print("don't print me!")
+		set y to true
+		print("hello")
+
+	if (not y)
+		print("print me!")
