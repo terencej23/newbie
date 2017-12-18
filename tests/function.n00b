@@ -1,0 +1,8 @@
+
+define function main with no params
+	set a to foo()
+	print(a)
+	print(foo())
+
+define function foo with no params
+	return "hello!"

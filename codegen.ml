@@ -46,9 +46,10 @@ let translate (globals, functions) =
       let function_decl m fdecl = 
         let name = fdecl.S.sfname
         and formal_types = 
-        Array.of_list(List.map (fun (_) -> void_t) fdecl.S.sformals) 
+        Array.of_list(List.map 
+          (fun (_, t) -> ltype_of_typ t) fdecl.S.sformals) 
         in
-        let ftype = L.function_type void_t formal_types in
+        let ftype = L.function_type (ltype_of_typ fdecl.S.styp) formal_types in
         StringMap.add name (L.define_function name ftype the_module, fdecl) m
       in
       List.fold_left function_decl StringMap.empty functions
@@ -135,7 +136,9 @@ let translate (globals, functions) =
 
       | S.SBlock sl           -> List.fold_left stmt builder sl ; 
       | S.SExpr (e, _)        -> ignore (expr builder e) ; builder
-      | S.SReturn (e, _)      -> ignore (L.build_ret_void builder) ; builder
+      | S.SReturn (e, _) -> ignore (match !current_f.S.styp with
+          A.Datatype(A.Void) -> L.build_ret_void builder
+          | _ -> L.build_ret (expr builder e) builder); builder
       | S.SAssign (s, e, _)   ->
           let expr_t = Semant.sexpr_to_type e in (
             match expr_t with
