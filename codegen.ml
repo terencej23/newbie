@@ -22,13 +22,54 @@ let translate (globals, functions) =
     let global_vars = ref (StringMap.empty) in
     let current_f = ref (List.hd functions) in
     let local_vars = ref (StringMap.empty) in 
+    (* list lookup *)
+    let list_lookup = ref (StringMap.empty) in
+
+    (* pointer wrapper - map of named struct types pointers *)
+    let pointer_wrapper =
+      List.fold_left
+      (fun map name -> StringMap.add name (L.named_struct_type context name) map)
+      StringMap.empty ["string"; "int"; "float"; "void"; "bool"]
+    in
+
+    (* set struct body fields for each of the types *)
+    let () = 
+      let set_struct_body name l =
+        let t = StringMap.find name pointer_wrapper in
+        ignore(
+          L.struct_set_body t (Array.of_list(l)) true
+        )
+      in
+      let named_types = ["string"; "int"; "float"; "void"; "bool"] in
+      let llvm_types = [
+        [L.pointer_type str_t; i32_t; i32_t]    ;
+        [L.pointer_type i32_t; i32_t; i32_t]    ; 
+        [L.pointer_type float_t; i32_t; i32_t]  ;
+        [L.pointer_type void_t; i32_t; i32_t]   ;
+        [L.pointer_type i1_t; i32_t; i32_t]     ;
+      ] 
+      in
+      List.iter2 set_struct_body named_types llvm_types
+    in
+
+    (* Format strings for printing *) 
+    let int_format_str builder = L.build_global_stringptr "%d\n" "fmt" builder 
+    and str_format_str builder = L.build_global_stringptr "%s\n" "fmt" builder 
+    and float_format_str builder = L.build_global_stringptr "%f\n" "fmt" builder in  
+
+    (* get struct pointer *)
+    let lookup_struct typ =
+      let s = string_of_typ typ in
+      StringMap.find s pointer_wrapper
+    in
 
     let ltype_of_typ = function
-        A.Datatype(A.Int)   ->  i32_t
-      | A.Datatype(A.Bool)  ->  i1_t
-      | A.Datatype(A.Void)  ->  void_t
-      | A.Datatype(A.String)->  str_t
-      | A.Datatype(A.Float) -> float_t 
+        A.Datatype(A.Int)     ->  i32_t
+      | A.Datatype(A.Bool)    ->  i1_t
+      | A.Datatype(A.Void)    ->  void_t
+      | A.Datatype(A.String)  ->  str_t
+      | A.Datatype(A.Float)   -> float_t 
+      | A.Listtype(t)         -> L.pointer_type (lookup_struct (A.Datatype(t)))
     in
 
     (* Declare print *)
@@ -67,6 +108,7 @@ let translate (globals, functions) =
       | S.SNoexpr    -> L.const_int i32_t 0
       | S.SFloatLit(f, _) -> L.const_float float_t f 
       | S.SIntLit (i, _)  -> L.const_int i32_t i
+      (* print built-in *)
       | S.SCall("printstr", [e], _) -> 
         L.build_call print_func [| str_format_str builder; (expr builder e)|]
         "printf" builder
@@ -79,6 +121,7 @@ let translate (globals, functions) =
       | S.SCall("printbool", [e], _) -> 
         L.build_call print_func [| int_format_str builder; (expr builder e)|]
         "printf" builder
+      (* function refs *)
       | S.SCall(f, act, _ ) ->
           let (fdef, fdecl) = StringMap.find f function_decls in
           let actuals = List.rev (List.map (expr builder) (List.rev act)) in
@@ -129,6 +172,18 @@ let translate (globals, functions) =
               | _ -> raise E.InvalidBinaryOperation 
               ) e1' e2' "tmp" builder
               | _ -> raise E.InvalidBinaryOperation) 
+      (* list expr *)
+      | S.SList(se_l, t)    ->
+          let it = 
+            match typ with
+              A.Listtype(it)  -> it
+            | _               -> (raise (E.InvalidListElementType))
+          in
+          let struct_ptr = L.build_malloc (lookup_struct t) "list1" builder in
+          let size = L.const_int i32_t ((List.length el) + 1) in
+          let typ = L.pointer_type (ltype_of_typ (A.Datatype(it))) in
+          let arr = L.build_array_malloc typ size "list2" builder in
+          let arr = L.build_pointercast
 
     and stmt builder = 
       let (the_function, _) = StringMap.find !current_f.S.sfname function_decls 

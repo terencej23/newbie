@@ -30,6 +30,10 @@ let rec expr_to_sexpr expr env =
   (* built-in functions *)
   | Call("print", e_l)        -> (check_print e_l env)
   | Call(s, e_l)              -> (check_call s e_l env)
+  (* list functionality *)
+  | List(e_l)                 -> (check_list e_l env)
+  | ListAccess(s, e)          -> (check_access s e env)
+  | ListSlice(s, e1, e2)      -> (check_slice s e1 e2 env) (* returns func call *)
 
 and sexpr_to_type = function
     SIntLit(_, typ)           -> typ
@@ -41,6 +45,9 @@ and sexpr_to_type = function
   | SUnop(_, _, typ)          -> typ
   | SCall(_, _, typ)          -> typ
   | SNoexpr                   -> Datatype(Void)
+  (* list functionality *)
+  | SList(_, typ)             -> typ
+  | SListAccess(_, _, typ)    -> typ
 
 and expr_list_to_sexpr_list e_l env =
   let env_ref = ref(env) in
@@ -55,13 +62,15 @@ and expr_list_to_sexpr_list e_l env =
 
 and stmt_to_sstmt stmt env =
   match stmt with
-    Block sl            -> check_sblock sl env
-  | Expr e              -> check_expr e env
-  | Assign(s, e)        -> check_assign s e env
-  | Return e            -> check_return e env
-  | If(e, s1, s2)       -> check_if e s1 s2 env
-  | While(e, s)         -> check_while e s env
+    Block sl                -> check_sblock sl env
+  | Expr e                  -> check_expr e env
+  | Assign(s, e)            -> check_assign s e env
+  | Return e                -> check_return e env
+  | If(e, s1, s2)           -> check_if e s1 s2 env
+  | While(e, s)             -> check_while e s env
   | Break               -> check_break env
+  (* list functionality *)
+  | ListReplace(s, e1, e2)  -> check_replace s e1 e2 env
 
 and fdecl_to_sfdecl fname arg_type_list env =
   let fdecl = StringMap.find fname env.env_fmap in
@@ -317,11 +326,38 @@ and check_assign var expr env =
       with Not_found -> 
         StringMap.find var env.env_globals (* query global *)
     in
-    (
-      if (old_typ <> new_typ) then 
-        Printf.printf "WARNING: var %s of type %s has been redeclared with type %s ..."
-          var (string_of_typ old_typ) (string_of_typ new_typ)
-    ) ; (SAssign(var, sexpr, new_typ), env)
+    match (old_typ, new_typ) with
+      (* check list types *)
+      Listtype(t1), Listtype(t2)  ->
+        if (t1 <> t2 && t2 <> Void) then      (* type mismatch - for now TODO *)
+          let msg =
+            Printf.sprintf "var %s of listtype %s has been redeclared with listtype %s - lists must be homogenous"
+            var (string_of_typ (Datatype(t1))) (string_of_typ (Datatype(t2)))
+          in
+          (raise (E.TypeMismatch(msg)))
+        else if (t2 = Void) then              (* new type is void return old type *)
+          (SAssign(var, sexpr, old_typ), env)
+        else
+          let flocals = StringMap.add var new_typ env.env_flocals in
+          let new_env = {
+            env_fmap = env.env_fmap;
+            env_fname = env.env_fname;
+            env_return_type = env.env_return_type; 
+            env_globals = env.env_globals;
+            env_flocals = flocals; 
+            env_in_loop = env.env_in_loop;
+            env_set_return = env.env_set_return; 
+            env_sfmap = env.env_sfmap
+          } 
+          in
+          (SAssign(var, sexpr, new_typ), new_env)
+
+      (* check all other types *)
+    | _                           -> (
+        if (old_typ <> new_typ) then 
+          Printf.printf "WARNING: var %s of type %s has been redeclared with type %s ..."
+            var (string_of_typ old_typ) (string_of_typ new_typ)
+      ) ; (SAssign(var, sexpr, new_typ), env)
 
   (* var not declared, bind typ in map *)
   else
@@ -508,6 +544,109 @@ and build_fdecl_map functions =
       StringMap.add fdecl.fname fdecl map 
   in
   List.fold_left check builtin_decls functions
+
+(* list - check __get_item__ *)
+and check_access id expr env =
+  let _ = check_scope id env in
+  let typ =
+    try 
+      StringMap.find id env.env_flocals
+    with Not_found ->
+      StringMap.find id env.env_globals
+  in
+  let elem_typ =
+    match typ with
+      Listtype(t) -> t
+    | _           -> (raise (E.IndexError))
+  in
+  let (se, env) = expr_to_sexpr expr env in
+  let access_typ = sexpr_to_type se in
+  if (access_typ <> Datatype(Int)) then 
+    (raise (E.IndexError))
+  else 
+    (SListAccess(id, se, Datatype(elem_typ)), env)
+
+(* list - check init *)
+and check_list e_l env =
+  if (List.length e_l = 0) then
+    (SList([], Listtype(Void)), env)
+  else 
+    let (first_sexpr, env) = expr_to_sexpr (List.hd e_l) env in
+    let target_typ = sexpr_to_type first_sexpr in
+    (* TODO: for now - assume all list elements have same primitive type *)
+    let list_typ =
+      match target_typ with
+        Datatype(typ)     -> typ
+      | _                 -> (raise (E.InvalidListElementType))
+    in
+    let env_ref = ref (env) in
+    let check_element_type se_l expr =
+      let (sexpr, env) = expr_to_sexpr expr !env_ref in
+      env_ref := env ;
+      let typ = sexpr_to_type sexpr in
+      if (typ <> target_typ) then
+        (raise (E.ListElementsOfVariantType))  
+      else
+        (sexpr :: se_l)
+    in
+    let se_l = List.rev @@ (List.fold_left check_element_type [] (List.tl e_l)) in
+    let final = first_sexpr :: se_l in
+    ((SList(final, Listtype(list_typ))), !env_ref)
+
+(* list - check slice operation *)
+and check_slice id e1 e2 env =
+  let sid = check_scope id env in
+  let typ =
+    try 
+      StringMap.find id env.env_flocals
+    with Not_found ->
+      StringMap.find id env.env_globals
+  in
+  let elem_typ =
+    match typ with
+      Listtype(t) -> t
+    | _           -> (raise (E.IndexError))
+  in 
+  let (se1, env) = expr_to_sexpr e1 env in
+  let (se2, env) = expr_to_sexpr e2 env in
+  let typ1 = sexpr_to_type se1 in
+  let typ2 = sexpr_to_type se2 in
+  if (typ1 <> Datatype(Int) || typ2 <> Datatype(Int)) then
+    (raise (E.IndexError))
+  else
+    (* TODO: build these functions *)
+    match elem_typ with
+      Int     -> (SCall("sliceint", [sid; se1; se2], typ), env) 
+    | String  -> (SCall("slicestr", [sid; se1; se2], typ), env )
+    | Float   -> (SCall("slicefloat", [sid; se1; se2], typ), env)
+    | Bool    -> (SCall("slicebool", [sid; se1; se2], typ), env)
+    | _       -> (raise (E.InvalidSliceOperation))
+
+(* list - check replace assignment *)
+and check_replace id e1 e2 env =
+  (* verify index is accessible *)
+  let _ = check_access id e1 env in
+  let typ =
+    try 
+      StringMap.find id env.env_flocals
+    with Not_found ->
+      StringMap.find id env.env_globals
+  in
+  let elem_typ =
+    match typ with
+      Listtype(t) -> t
+    | _           -> (raise (E.InvalidListAssignmentOperation))
+  in
+  let (se1, env) = expr_to_sexpr e1 env in
+  let (se2, env) = expr_to_sexpr e2 env in
+  let access_typ = sexpr_to_type se1 in
+  let input_typ = sexpr_to_type se2 in
+
+  (* index must be int & TODO: for now - list type must be homogenous *)
+  if (access_typ <> Datatype(Int) || input_typ <> Datatype(elem_typ)) then
+    (raise (E.InvalidListAssignmentOperation))
+  else
+    (SListReplace(id, se1, se2, input_typ), env)
 
 (* convert ast to sast *)
 and ast_to_sast (globals, functions) fmap =
