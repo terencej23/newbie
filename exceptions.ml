@@ -5,6 +5,7 @@ exception FunctionNameReserved
 exception FunctionNotDefined of string
 exception IncorrectArgumentType of string
 exception InvalidBinaryOperation
+exception InvalidCondition
 exception InvalidExecFormat of string 
 exception InvalidIfStatementType
 exception InvalidUnaryOperation
